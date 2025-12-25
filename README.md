@@ -6,7 +6,7 @@ The [official butterchurnviz.com](https://butterchurnviz.com) uses the deprecate
 
 ## Demo
 
-[**Live Demo →**](https://yourusername.github.io/butterchurn-ios/)
+[**Live Demo →**](https://pxl-pshr.github.io/butterchurn-ios/)
 
 ## Features
 
