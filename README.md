@@ -17,14 +17,6 @@ The [official butterchurnviz.com](https://butterchurnviz.com) uses the deprecate
 - ✅ Fullscreen support
 - ✅ Keyboard shortcuts (R=random, C=cycle, F=fullscreen, H=hide, ←→=prev/next)
 
-## Setup
-
-1. Clone or fork this repo
-2. Enable GitHub Pages (Settings → Pages → Source: main branch)
-3. Visit `https://pxl-pshr.github.io/butterchurn-ios/`
-
-Or just open `index.html` locally in any browser.
-
 ## Credits
 
 - [Butterchurn](https://github.com/jberg/butterchurn) by Jordan Berg
