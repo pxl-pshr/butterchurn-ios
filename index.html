@@ -264,10 +264,10 @@
     </div>
   </div>
 
-  <script src="https://unpkg.com/butterchurn@3.0.0-beta.5/dist/butterchurn.min.js"></script>
-  <script src="https://unpkg.com/butterchurn-presets@3.0.0-beta.4/dist/base.min.js"></script>
-  
-  <script>
+  <script type="module">
+    import butterchurn from 'https://esm.sh/butterchurn@2.6.7';
+    import butterchurnPresets from 'https://esm.sh/butterchurn-presets@2.4.7';
+    
     const canvas = document.getElementById('canvas');
     const startOverlay = document.getElementById('startOverlay');
     const startBtn = document.getElementById('startBtn');
@@ -279,10 +279,6 @@
     const cycleBtn = document.getElementById('cycleBtn');
     const fullscreenBtn = document.getElementById('fullscreenBtn');
     const hideBtn = document.getElementById('hideBtn');
-    
-    // Handle UMD default exports
-    const Butterchurn = window.butterchurn.default || window.butterchurn;
-    const basePresets = window.base.default || window.base || {};
     
     let audioContext;
     let visualizer;
@@ -297,7 +293,7 @@
     
     // Initialize presets dropdown
     function initPresets() {
-      presets = basePresets;
+      presets = butterchurnPresets.getPresets();
       presetKeys = Object.keys(presets).sort((a, b) => 
         a.toLowerCase().localeCompare(b.toLowerCase())
       );
@@ -428,7 +424,7 @@
         
         // Initialize visualizer
         resize();
-        visualizer = Butterchurn.createVisualizer(audioContext, canvas, {
+        visualizer = butterchurn.createVisualizer(audioContext, canvas, {
           width: canvas.width,
           height: canvas.height,
           pixelRatio: 1,
