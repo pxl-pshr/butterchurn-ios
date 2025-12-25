@@ -130,27 +130,6 @@
       border-color: var(--accent-dim);
     }
     
-    .preset-name {
-      position: fixed;
-      top: 20px;
-      left: 20px;
-      right: 20px;
-      font-size: 12px;
-      color: var(--text-dim);
-      text-shadow: 0 2px 10px rgba(0,0,0,0.8);
-      z-index: 10;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.5s;
-      text-overflow: ellipsis;
-      overflow: hidden;
-      white-space: nowrap;
-    }
-    
-    .preset-name.visible {
-      opacity: 1;
-    }
-    
     .start-overlay {
       position: fixed;
       inset: 0;
@@ -228,8 +207,6 @@
 <body>
   <canvas id="canvas"></canvas>
   
-  <div class="preset-name" id="presetName"></div>
-  
   <div class="start-overlay" id="startOverlay">
     <h1>Butterchurn</h1>
     <p>WebGL music visualizer powered by Milkdrop. Tap to enable microphone input and start visualizing.</p>
@@ -274,7 +251,6 @@
     const errorMsg = document.getElementById('errorMsg');
     const controls = document.getElementById('controls');
     const presetSelect = document.getElementById('presetSelect');
-    const presetNameDisplay = document.getElementById('presetName');
     const randomBtn = document.getElementById('randomBtn');
     const cycleBtn = document.getElementById('cycleBtn');
     const fullscreenBtn = document.getElementById('fullscreenBtn');
@@ -289,7 +265,6 @@
     let cycleInterval;
     let isCycling = false;
     let controlsHidden = false;
-    let presetNameTimeout;
     
     // Initialize presets dropdown
     function initPresets() {
@@ -313,14 +288,6 @@
       visualizer.loadPreset(presets[name], blendTime);
       currentPreset = name;
       presetSelect.value = name;
-      
-      // Show preset name briefly
-      presetNameDisplay.textContent = name;
-      presetNameDisplay.classList.add('visible');
-      clearTimeout(presetNameTimeout);
-      presetNameTimeout = setTimeout(() => {
-        presetNameDisplay.classList.remove('visible');
-      }, 3000);
     }
     
     // Random preset
