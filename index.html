@@ -264,8 +264,8 @@
     </div>
   </div>
 
-  <script src="https://unpkg.com/butterchurn@2.6.7/lib/butterchurn.min.js"></script>
-  <script src="https://unpkg.com/butterchurn-presets@2.4.7/lib/butterchurnPresets.min.js"></script>
+  <script src="https://unpkg.com/butterchurn@3.0.0-beta.5/dist/butterchurn.min.js"></script>
+  <script src="https://unpkg.com/butterchurn-presets@3.0.0-beta.4/dist/base.min.js"></script>
   
   <script>
     const canvas = document.getElementById('canvas');
@@ -280,6 +280,10 @@
     const fullscreenBtn = document.getElementById('fullscreenBtn');
     const hideBtn = document.getElementById('hideBtn');
     
+    // Handle UMD default exports
+    const Butterchurn = window.butterchurn.default || window.butterchurn;
+    const basePresets = window.base.default || window.base || {};
+    
     let audioContext;
     let visualizer;
     let presets;
@@ -293,7 +297,7 @@
     
     // Initialize presets dropdown
     function initPresets() {
-      presets = butterchurnPresets.getPresets();
+      presets = basePresets;
       presetKeys = Object.keys(presets).sort((a, b) => 
         a.toLowerCase().localeCompare(b.toLowerCase())
       );
@@ -424,7 +428,7 @@
         
         // Initialize visualizer
         resize();
-        visualizer = butterchurn.createVisualizer(audioContext, canvas, {
+        visualizer = Butterchurn.createVisualizer(audioContext, canvas, {
           width: canvas.width,
           height: canvas.height,
           pixelRatio: 1,
