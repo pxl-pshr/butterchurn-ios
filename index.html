@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Butterchurn Visualizer</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    :root {
+      --bg: #0a0a0c;
+      --surface: rgba(255, 255, 255, 0.05);
+      --surface-hover: rgba(255, 255, 255, 0.1);
+      --text: #e0e0e0;
+      --text-dim: #666;
+      --accent: #00ff88;
+      --accent-dim: rgba(0, 255, 136, 0.2);
+    }
+    
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+      height: 100vh;
+      height: 100dvh;
+    }
+    
+    #canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+    
+    .controls {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 20px;
+      background: linear-gradient(transparent, rgba(0,0,0,0.8) 30%);
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: opacity 0.3s, transform 0.3s;
+    }
+    
+    .controls.hidden {
+      opacity: 0;
+      transform: translateY(20px);
+      pointer-events: none;
+    }
+    
+    .controls-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    
+    button {
+      font-family: inherit;
+      font-size: 13px;
+      padding: 12px 20px;
+      border: 1px solid var(--surface-hover);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+    
+    button:hover {
+      background: var(--surface-hover);
+      border-color: var(--accent-dim);
+    }
+    
+    button:active {
+      transform: scale(0.97);
+    }
+    
+    button.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    
+    button svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+    }
+    
+    select {
+      font-family: inherit;
+      font-size: 13px;
+      padding: 12px 16px;
+      border: 1px solid var(--surface-hover);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+      flex: 1;
+      min-width: 0;
+      cursor: pointer;
+      -webkit-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23666'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 36px;
+    }
+    
+    select:focus {
+      outline: none;
+      border-color: var(--accent-dim);
+    }
+    
+    .preset-name {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      right: 20px;
+      font-size: 12px;
+      color: var(--text-dim);
+      text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+      z-index: 10;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.5s;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    
+    .preset-name.visible {
+      opacity: 1;
+    }
+    
+    .start-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      padding: 40px;
+      text-align: center;
+    }
+    
+    .start-overlay.hidden {
+      display: none;
+    }
+    
+    .start-overlay h1 {
+      font-size: clamp(24px, 6vw, 48px);
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), #00ccff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .start-overlay p {
+      color: var(--text-dim);
+      max-width: 400px;
+      line-height: 1.6;
+    }
+    
+    .start-btn {
+      font-size: 16px;
+      padding: 16px 40px;
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      font-weight: 700;
+    }
+    
+    .start-btn:hover {
+      background: #00ffaa;
+    }
+    
+    .error-msg {
+      color: #ff6b6b;
+      font-size: 12px;
+      padding: 12px;
+      background: rgba(255, 107, 107, 0.1);
+      border-radius: 8px;
+      display: none;
+    }
+    
+    .error-msg.visible {
+      display: block;
+    }
+    
+    @media (max-width: 600px) {
+      .controls {
+        padding: 16px;
+      }
+      
+      button {
+        padding: 14px 16px;
+      }
+      
+      button span {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  
+  <div class="preset-name" id="presetName"></div>
+  
+  <div class="start-overlay" id="startOverlay">
+    <h1>Butterchurn</h1>
+    <p>WebGL music visualizer powered by Milkdrop. Tap to enable microphone input and start visualizing.</p>
+    <button class="start-btn" id="startBtn">
+      <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+      <span>Enable Microphone</span>
+    </button>
+    <div class="error-msg" id="errorMsg"></div>
+  </div>
+  
+  <div class="controls" id="controls">
+    <div class="controls-row">
+      <select id="presetSelect"></select>
+    </div>
+    <div class="controls-row">
+      <button id="randomBtn" title="Random Preset">
+        <svg viewBox="0 0 24 24"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+        <span>Random</span>
+      </button>
+      <button id="cycleBtn" title="Auto-cycle Presets">
+        <svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+        <span>Cycle</span>
+      </button>
+      <button id="fullscreenBtn" title="Fullscreen">
+        <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+        <span>Fullscreen</span>
+      </button>
+      <button id="hideBtn" title="Hide Controls">
+        <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+        <span>Hide</span>
+      </button>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/butterchurn@2.6.7/lib/butterchurn.min.js"></script>
+  <script src="https://unpkg.com/butterchurn-presets@2.4.7/lib/butterchurnPresets.min.js"></script>
+  
+  <script>
+    const canvas = document.getElementById('canvas');
+    const startOverlay = document.getElementById('startOverlay');
+    const startBtn = document.getElementById('startBtn');
+    const errorMsg = document.getElementById('errorMsg');
+    const controls = document.getElementById('controls');
+    const presetSelect = document.getElementById('presetSelect');
+    const presetNameDisplay = document.getElementById('presetName');
+    const randomBtn = document.getElementById('randomBtn');
+    const cycleBtn = document.getElementById('cycleBtn');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+    const hideBtn = document.getElementById('hideBtn');
+    
+    let audioContext;
+    let visualizer;
+    let presets;
+    let presetKeys;
+    let currentPreset;
+    let animationId;
+    let cycleInterval;
+    let isCycling = false;
+    let controlsHidden = false;
+    let presetNameTimeout;
+    
+    // Initialize presets dropdown
+    function initPresets() {
+      presets = butterchurnPresets.getPresets();
+      presetKeys = Object.keys(presets).sort((a, b) => 
+        a.toLowerCase().localeCompare(b.toLowerCase())
+      );
+      
+      presetKeys.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        presetSelect.appendChild(option);
+      });
+    }
+    
+    // Load a preset
+    function loadPreset(name, blendTime = 1.0) {
+      if (!visualizer || !presets[name]) return;
+      
+      visualizer.loadPreset(presets[name], blendTime);
+      currentPreset = name;
+      presetSelect.value = name;
+      
+      // Show preset name briefly
+      presetNameDisplay.textContent = name;
+      presetNameDisplay.classList.add('visible');
+      clearTimeout(presetNameTimeout);
+      presetNameTimeout = setTimeout(() => {
+        presetNameDisplay.classList.remove('visible');
+      }, 3000);
+    }
+    
+    // Random preset
+    function randomPreset() {
+      const idx = Math.floor(Math.random() * presetKeys.length);
+      loadPreset(presetKeys[idx]);
+    }
+    
+    // Toggle cycling
+    function toggleCycle() {
+      isCycling = !isCycling;
+      cycleBtn.classList.toggle('active', isCycling);
+      
+      if (isCycling) {
+        cycleInterval = setInterval(randomPreset, 15000);
+      } else {
+        clearInterval(cycleInterval);
+      }
+    }
+    
+    // Resize handler
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      
+      if (visualizer) {
+        visualizer.setRendererSize(width * dpr, height * dpr);
+      }
+    }
+    
+    // Render loop
+    function render() {
+      if (visualizer) {
+        visualizer.render();
+      }
+      animationId = requestAnimationFrame(render);
+    }
+    
+    // Toggle fullscreen
+    function toggleFullscreen() {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen();
+        } else if (document.documentElement.webkitRequestFullscreen) {
+          document.documentElement.webkitRequestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
+      }
+    }
+    
+    // Toggle controls visibility
+    function toggleControls() {
+      controlsHidden = !controlsHidden;
+      controls.classList.toggle('hidden', controlsHidden);
+    }
+    
+    // Show controls on tap (when hidden)
+    canvas.addEventListener('click', () => {
+      if (controlsHidden) {
+        controlsHidden = false;
+        controls.classList.remove('hidden');
+      }
+    });
+    
+    // Main start function
+    async function start() {
+      try {
+        // Create audio context (must be after user gesture for iOS)
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Resume if suspended (iOS requirement)
+        if (audioContext.state === 'suspended') {
+          await audioContext.resume();
+        }
+        
+        // Request microphone with modern API
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false
+          }
+        });
+        
+        // Create audio nodes
+        const source = audioContext.createMediaStreamSource(stream);
+        const gain = audioContext.createGain();
+        gain.gain.value = 1.5;
+        source.connect(gain);
+        
+        // Initialize visualizer
+        resize();
+        visualizer = butterchurn.createVisualizer(audioContext, canvas, {
+          width: canvas.width,
+          height: canvas.height,
+          pixelRatio: 1,
+          textureRatio: 1
+        });
+        
+        // Connect audio
+        visualizer.connectAudio(gain);
+        
+        // Load initial preset
+        initPresets();
+        randomPreset();
+        
+        // Hide overlay, start rendering
+        startOverlay.classList.add('hidden');
+        render();
+        
+      } catch (err) {
+        console.error('Error:', err);
+        let msg = 'Could not access microphone. ';
+        
+        if (err.name === 'NotAllowedError') {
+          msg += 'Please allow microphone access in your browser settings.';
+        } else if (err.name === 'NotFoundError') {
+          msg += 'No microphone found on this device.';
+        } else {
+          msg += err.message || 'Unknown error occurred.';
+        }
+        
+        errorMsg.textContent = msg;
+        errorMsg.classList.add('visible');
+      }
+    }
+    
+    // Event listeners
+    startBtn.addEventListener('click', start);
+    presetSelect.addEventListener('change', () => loadPreset(presetSelect.value));
+    randomBtn.addEventListener('click', randomPreset);
+    cycleBtn.addEventListener('click', toggleCycle);
+    fullscreenBtn.addEventListener('click', toggleFullscreen);
+    hideBtn.addEventListener('click', toggleControls);
+    window.addEventListener('resize', resize);
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'f') toggleFullscreen();
+      if (e.key === 'r') randomPreset();
+      if (e.key === 'c') toggleCycle();
+      if (e.key === 'h' || e.key === 'Escape') toggleControls();
+      if (e.key === 'ArrowRight') {
+        const idx = (presetKeys.indexOf(currentPreset) + 1) % presetKeys.length;
+        loadPreset(presetKeys[idx]);
+      }
+      if (e.key === 'ArrowLeft') {
+        const idx = (presetKeys.indexOf(currentPreset) - 1 + presetKeys.length) % presetKeys.length;
+        loadPreset(presetKeys[idx]);
+      }
+    });
+  </script>
+</body>
+</html>
