@@ -3,13 +3,30 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#0a0a0c">
   <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="preload" href="vendor/jetbrains-mono-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   <title>Butterchurn Visualizer</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+    @font-face {
+      font-family: 'JetBrains Mono';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url('vendor/jetbrains-mono-latin-400-normal.woff2') format('woff2');
+    }
+
+    @font-face {
+      font-family: 'JetBrains Mono';
+      font-style: normal;
+      font-weight: 700;
+      font-display: swap;
+      src: url('vendor/jetbrains-mono-latin-700-normal.woff2') format('woff2');
+    }
 
     * {
       margin: 0;
@@ -28,7 +45,7 @@
     }
 
     body {
-      font-family: 'JetBrains Mono', monospace;
+      font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace;
       background: var(--bg);
       color: var(--text);
       overflow: hidden;
@@ -309,11 +326,38 @@
       color: var(--text-dim);
     }
 
+    .setting-row select {
+      flex: 0 0 auto;
+      padding: 8px 36px 8px 12px;
+    }
+
     .setting-row input[type="checkbox"] {
       width: 18px;
       height: 18px;
       accent-color: var(--accent);
       cursor: pointer;
+    }
+
+    .github-link {
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    #playPauseBtn .icon-play,
+    #playPauseBtn.paused .icon-pause {
+      display: none;
+    }
+
+    #playPauseBtn.paused .icon-play {
+      display: inline;
+    }
+
+    [hidden] {
+      display: none !important;
     }
 
     #favBtn.active {
@@ -366,6 +410,9 @@
       </button>
     </div>
     <div class="controls-row">
+      <button id="playPauseBtn" title="Play/Pause" hidden>
+        <svg viewBox="0 0 24 24"><path class="icon-pause" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/><path class="icon-play" d="M8 5v14l11-7z"/></svg>
+      </button>
       <button id="prevBtn" title="Previous Preset">
         <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
       </button>
@@ -409,17 +456,39 @@
       <label for="favoritesOnly">Favorites only</label>
       <input type="checkbox" id="favoritesOnly">
     </div>
+    <div class="setting-row" style="margin-top: 12px;">
+      <label for="renderScale">Render resolution</label>
+      <select id="renderScale">
+        <option value="auto">Auto (up to 2x)</option>
+        <option value="1">1x (fastest)</option>
+        <option value="1.5">1.5x</option>
+        <option value="2">2x (sharpest)</option>
+      </select>
+    </div>
     <div style="margin-top: 16px; text-align: center;">
-      <a href="https://github.com/pxl-pshr/butterchurn-ios" target="_blank" rel="noopener" style="color: var(--text-secondary); text-decoration: none; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;">
+      <a class="github-link" href="https://github.com/pxl-pshr/butterchurn-ios" target="_blank" rel="noopener">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
         GitHub
       </a>
     </div>
   </div>
 
+<script src="vendor/butterchurn.min.js"></script>
+<script src="vendor/butterchurnPresets.min.js"></script>
 <script type="module">
-    import butterchurn from 'https://esm.sh/butterchurn@2.6.7';
-    import butterchurnPresets from 'https://esm.sh/butterchurn-presets@2.4.7';
+    // Vendored UMD builds (see vendor/LICENSES.txt)
+    const butterchurn = window.butterchurn && window.butterchurn.default;
+    const butterchurnPresets = window.butterchurnPresets;
+
+    const MIC_CONSTRAINTS = {
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false
+      }
+    };
+    const RENDER_SCALES = ['auto', '1', '1.5', '2'];
+    const CONTROLS_AUTO_HIDE_MS = 4000;
 
     const app = {
       // DOM
@@ -429,6 +498,7 @@
       errorMsg: document.getElementById('errorMsg'),
       controls: document.getElementById('controls'),
       presetSelect: document.getElementById('presetSelect'),
+      playPauseBtn: document.getElementById('playPauseBtn'),
       prevBtn: document.getElementById('prevBtn'),
       nextBtn: document.getElementById('nextBtn'),
       randomBtn: document.getElementById('randomBtn'),
@@ -443,12 +513,14 @@
       cycleDurationInput: document.getElementById('cycleDuration'),
       favBtn: document.getElementById('favBtn'),
       favoritesOnlyInput: document.getElementById('favoritesOnly'),
+      renderScaleInput: document.getElementById('renderScale'),
 
       // State
       audioContext: null,
+      inputGain: null,
       visualizer: null,
       presets: null,
-      presetKeys: null,
+      presetKeys: [],
       currentPreset: null,
       animationId: null,
       cycleInterval: null,
@@ -457,9 +529,15 @@
       controlsTimeout: null,
       mediaStream: null,
       audioSource: null,
+      audioEl: null,
+      audioUrl: null,
+      autoplayBlocked: false,
+      micNeedsReconnect: false,
+      reconnectingMic: false,
       contextLost: false,
       settingsOpen: false,
       cycleDuration: 15,
+      renderScale: 'auto',
       favorites: new Set(),
       favoritesOnly: false,
 
@@ -479,6 +557,10 @@
             this.favoritesOnly = true;
             this.favoritesOnlyInput.checked = true;
           }
+          if (RENDER_SCALES.includes(data.renderScale)) {
+            this.renderScale = data.renderScale;
+            this.renderScaleInput.value = data.renderScale;
+          }
         } catch {}
       },
 
@@ -488,9 +570,19 @@
           localStorage.setItem('butterchurn-settings', JSON.stringify({
             cycleDuration: this.cycleDuration,
             favorites: [...this.favorites],
-            favoritesOnly: this.favoritesOnly
+            favoritesOnly: this.favoritesOnly,
+            renderScale: this.renderScale
           }));
         } catch {}
+      },
+
+      showError(msg) {
+        this.errorMsg.textContent = msg;
+        this.errorMsg.classList.add('visible');
+      },
+
+      hideError() {
+        this.errorMsg.classList.remove('visible');
       },
 
       // Toggle favorite for current preset
@@ -517,14 +609,15 @@
         for (let i = 0; i < options.length; i++) {
           const name = options[i].value;
           const isFav = this.favorites.has(name);
-          options[i].textContent = isFav ? '\u2605 ' + name : name;
+          options[i].textContent = isFav ? '★ ' + name : name;
         }
       },
 
-      // Get the pool of presets to pick from (all or favorites only)
+      // Get the pool of presets to pick from (favorites only if any still exist, else all)
       getPresetPool() {
-        if (this.favoritesOnly && this.favorites.size > 0) {
-          return this.presetKeys.filter(k => this.favorites.has(k));
+        if (this.favoritesOnly) {
+          const favs = this.presetKeys.filter(k => this.favorites.has(k));
+          if (favs.length > 0) return favs;
         }
         return this.presetKeys;
       },
@@ -554,27 +647,35 @@
         this.updateFavBtn();
       },
 
-      // Random preset
+      // Random preset (never repeats the current one when there's a choice)
       randomPreset() {
         const pool = this.getPresetPool();
-        const idx = Math.floor(Math.random() * pool.length);
+        if (pool.length === 0) return;
+        let name;
+        do {
+          name = pool[Math.floor(Math.random() * pool.length)];
+        } while (pool.length > 1 && name === this.currentPreset);
+        this.loadPreset(name);
+      },
+
+      // Move through the pool by delta (+1 next, -1 previous)
+      stepPreset(delta) {
+        const pool = this.getPresetPool();
+        if (pool.length === 0) return;
+        const cur = pool.indexOf(this.currentPreset);
+        // Current preset not in the pool (e.g. favorites-only just enabled): start from either end
+        const idx = cur === -1
+          ? (delta > 0 ? 0 : pool.length - 1)
+          : (cur + delta + pool.length) % pool.length;
         this.loadPreset(pool[idx]);
       },
 
-      // Next preset
       nextPreset() {
-        const pool = this.getPresetPool();
-        const cur = pool.indexOf(this.currentPreset);
-        const idx = (cur + 1) % pool.length;
-        this.loadPreset(pool[idx]);
+        this.stepPreset(1);
       },
 
-      // Previous preset
       prevPreset() {
-        const pool = this.getPresetPool();
-        const cur = pool.indexOf(this.currentPreset);
-        const idx = (cur - 1 + pool.length) % pool.length;
-        this.loadPreset(pool[idx]);
+        this.stepPreset(-1);
       },
 
       // Start the cycle interval
@@ -592,9 +693,6 @@
         this.cycleBtn.classList.toggle('active', this.isCycling);
 
         if (this.isCycling) {
-          // Always read the latest input value
-          const val = parseInt(this.cycleDurationInput.value, 10);
-          if (val >= 1 && val <= 300) this.cycleDuration = val;
           this.startCycleInterval();
         } else {
           clearInterval(this.cycleInterval);
@@ -602,19 +700,28 @@
         }
       },
 
+      // Pixel ratio to render at, per the render resolution setting
+      getPixelRatio() {
+        const dpr = window.devicePixelRatio || 1;
+        if (this.renderScale === 'auto') return Math.min(dpr, 2);
+        return Math.min(parseFloat(this.renderScale), Math.max(dpr, 1));
+      },
+
       // Resize handler
       resize() {
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const ratio = this.getPixelRatio();
         const width = window.innerWidth;
         const height = window.innerHeight;
+        const pixelWidth = Math.round(width * ratio);
+        const pixelHeight = Math.round(height * ratio);
 
-        this.canvas.width = width * dpr;
-        this.canvas.height = height * dpr;
+        this.canvas.width = pixelWidth;
+        this.canvas.height = pixelHeight;
         this.canvas.style.width = width + 'px';
         this.canvas.style.height = height + 'px';
 
         if (this.visualizer) {
-          this.visualizer.setRendererSize(width * dpr, height * dpr);
+          this.visualizer.setRendererSize(pixelWidth, pixelHeight);
         }
       },
 
@@ -634,40 +741,90 @@
         }
       },
 
+      // iPhone Safari only allows fullscreen on <video>, so this is false there
+      isFullscreenSupported() {
+        return !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+      },
+
       // Toggle fullscreen
       toggleFullscreen() {
+        if (!this.isFullscreenSupported()) return;
+        const el = document.documentElement;
+        let result;
         if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-          if (document.documentElement.requestFullscreen) {
-            document.documentElement.requestFullscreen();
-          } else if (document.documentElement.webkitRequestFullscreen) {
-            document.documentElement.webkitRequestFullscreen();
+          if (el.requestFullscreen) {
+            result = el.requestFullscreen();
+          } else if (el.webkitRequestFullscreen) {
+            result = el.webkitRequestFullscreen();
           }
         } else {
           if (document.exitFullscreen) {
-            document.exitFullscreen();
+            result = document.exitFullscreen();
           } else if (document.webkitExitFullscreen) {
-            document.webkitExitFullscreen();
+            result = document.webkitExitFullscreen();
           }
         }
+        if (result && result.catch) {
+          result.catch(err => console.error('Fullscreen error:', err));
+        }
+      },
+
+      setControlsHidden(hidden) {
+        clearTimeout(this.controlsTimeout);
+        this.controlsTimeout = null;
+        this.controlsHidden = hidden;
+        this.controls.classList.toggle('hidden', hidden);
       },
 
       // Toggle controls visibility
       toggleControls() {
-        this.controlsHidden = !this.controlsHidden;
-        this.controls.classList.toggle('hidden', this.controlsHidden);
-        clearTimeout(this.controlsTimeout);
+        this.setControlsHidden(!this.controlsHidden);
       },
 
       // Show controls temporarily (auto-hide after delay)
       showControlsTemporarily() {
         if (!this.controlsHidden) return;
-        this.controlsHidden = false;
-        this.controls.classList.remove('hidden');
+        this.setControlsHidden(false);
+        this.scheduleAutoHide();
+      },
+
+      // (Re)start the auto-hide timer
+      scheduleAutoHide() {
         clearTimeout(this.controlsTimeout);
         this.controlsTimeout = setTimeout(() => {
-          this.controlsHidden = true;
-          this.controls.classList.add('hidden');
-        }, 4000);
+          // Don't hide while the preset list is open
+          if (document.activeElement === this.presetSelect) {
+            this.scheduleAutoHide();
+            return;
+          }
+          this.setControlsHidden(true);
+        }, CONTROLS_AUTO_HIDE_MS);
+      },
+
+      // Create the AudioContext and track it immediately so cleanup() can always close it
+      createAudioContext() {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        const ctx = new Ctx();
+        this.audioContext = ctx;
+        // iOS suspends/interrupts the context on calls, lock, app switch
+        ctx.addEventListener('statechange', () => {
+          if (document.visibilityState === 'visible') this.resumeAudio();
+        });
+        return ctx;
+      },
+
+      resumeAudio() {
+        const ctx = this.audioContext;
+        if (ctx && ctx.state !== 'running' && ctx.state !== 'closed') {
+          ctx.resume().catch(() => {});
+        }
+      },
+
+      stopMicStream() {
+        if (this.mediaStream) {
+          this.mediaStream.getTracks().forEach(track => track.stop());
+          this.mediaStream = null;
+        }
       },
 
       // Cleanup previous session
@@ -679,14 +836,33 @@
           this.cycleInterval = null;
         }
 
-        if (this.mediaStream) {
-          this.mediaStream.getTracks().forEach(track => track.stop());
-          this.mediaStream = null;
+        this.stopMicStream();
+
+        if (this.audioEl) {
+          const audioEl = this.audioEl;
+          this.audioEl = null;
+          audioEl.pause();
+          audioEl.removeAttribute('src');
+          audioEl.load();
+        }
+
+        if (this.audioUrl) {
+          URL.revokeObjectURL(this.audioUrl);
+          this.audioUrl = null;
         }
 
         if (this.audioSource) {
           try { this.audioSource.disconnect(); } catch {}
           this.audioSource = null;
+        }
+
+        if (this.visualizer && this.inputGain) {
+          try { this.visualizer.disconnectAudio(this.inputGain); } catch {}
+        }
+
+        if (this.inputGain) {
+          try { this.inputGain.disconnect(); } catch {}
+          this.inputGain = null;
         }
 
         if (this.audioContext) {
@@ -698,59 +874,133 @@
         this.isCycling = false;
         this.cycleBtn.classList.remove('active');
         this.contextLost = false;
+        this.micNeedsReconnect = false;
+        this.autoplayBlocked = false;
+        this.playPauseBtn.hidden = true;
       },
 
-      // Initialize visualizer with an audio source node
-      initVisualizer(audioContext, sourceNode) {
-        this.audioContext = audioContext;
+      // Tear down and go back to the start screen with a message
+      returnToStart(msg) {
+        this.cleanup();
+        if (this.settingsOpen) this.toggleSettings();
+        this.setControlsHidden(false);
+        this.startOverlay.classList.remove('hidden');
+        this.showError(msg);
+      },
 
-        const gain = audioContext.createGain();
-        gain.gain.value = 1.5;
-        sourceNode.connect(gain);
-
+      // Create the visualizer on the canvas and feed it from inputGain
+      createVisualizer() {
+        this.visualizer = null;
         this.resize();
-        this.visualizer = butterchurn.createVisualizer(audioContext, this.canvas, {
+        this.visualizer = butterchurn.createVisualizer(this.audioContext, this.canvas, {
           width: this.canvas.width,
           height: this.canvas.height,
           pixelRatio: 1,
           textureRatio: 1
         });
+        this.visualizer.connectAudio(this.inputGain);
+      },
 
-        this.visualizer.connectAudio(gain);
+      // Recreate the visualizer after a WebGL context restore (old GPU resources are gone)
+      rebuildVisualizer() {
+        if (!this.visualizer) return;
+        try { this.visualizer.disconnectAudio(this.inputGain); } catch {}
+        this.createVisualizer();
+        if (this.currentPreset) this.loadPreset(this.currentPreset, 0);
+      },
+
+      // Initialize visualizer with an audio source node
+      initVisualizer(sourceNode) {
+        this.inputGain = this.audioContext.createGain();
+        this.inputGain.gain.value = 1.5;
+        sourceNode.connect(this.inputGain);
 
         if (!this.presets) {
           this.initPresets();
           this.updatePresetDropdown();
         }
+        this.createVisualizer();
         this.randomPreset();
 
+        this.hideError();
         this.startOverlay.classList.add('hidden');
         this.render();
       },
 
+      attachMicStream(stream) {
+        this.mediaStream = stream;
+        this.audioSource = this.audioContext.createMediaStreamSource(stream);
+        // iOS can end the mic track when the app is backgrounded or another app takes the mic
+        stream.getAudioTracks().forEach(track => {
+          track.addEventListener('ended', () => this.onMicEnded(stream));
+        });
+      },
+
+      onMicEnded(stream) {
+        if (stream !== this.mediaStream) return;
+        if (document.visibilityState === 'visible') {
+          this.reconnectMic();
+        } else {
+          this.micNeedsReconnect = true;
+        }
+      },
+
+      async reconnectMic() {
+        if (this.reconnectingMic || !this.audioContext) return;
+        this.reconnectingMic = true;
+        this.micNeedsReconnect = false;
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia(MIC_CONSTRAINTS);
+          if (!this.audioContext) {
+            stream.getTracks().forEach(track => track.stop());
+            return;
+          }
+          this.stopMicStream();
+          if (this.audioSource) {
+            try { this.audioSource.disconnect(); } catch {}
+          }
+          this.attachMicStream(stream);
+          this.audioSource.connect(this.inputGain);
+          this.resumeAudio();
+        } catch (err) {
+          console.error('Mic reconnect error:', err);
+          this.returnToStart('Microphone disconnected. Tap Enable Microphone to reconnect.');
+        } finally {
+          this.reconnectingMic = false;
+        }
+      },
+
       // Start with microphone
       async startMic() {
-        try {
-          this.cleanup();
+        this.cleanup();
+        this.hideError();
+        let audioContext = null;
 
-          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        try {
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            const err = new Error('Microphone access requires a secure (HTTPS) connection.');
+            err.name = 'NotSupportedError';
+            throw err;
+          }
+
+          audioContext = this.createAudioContext();
           if (audioContext.state === 'suspended') {
             await audioContext.resume();
           }
 
-          const stream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-              echoCancellation: false,
-              noiseSuppression: false,
-              autoGainControl: false
-            }
-          });
+          const stream = await navigator.mediaDevices.getUserMedia(MIC_CONSTRAINTS);
+          // A second tap may have started another session while we waited
+          if (this.audioContext !== audioContext) {
+            stream.getTracks().forEach(track => track.stop());
+            return;
+          }
 
-          this.mediaStream = stream;
-          this.audioSource = audioContext.createMediaStreamSource(stream);
-          this.initVisualizer(audioContext, this.audioSource);
+          this.attachMicStream(stream);
+          this.initVisualizer(this.audioSource);
 
         } catch (err) {
+          // Superseded by a newer session: don't tear that one down
+          if (audioContext && this.audioContext !== audioContext) return;
           console.error('Error:', err);
           let msg = 'Could not access microphone. ';
 
@@ -762,41 +1012,70 @@
             msg += err.message || 'Unknown error occurred.';
           }
 
-          this.errorMsg.textContent = msg;
-          this.errorMsg.classList.add('visible');
+          this.returnToStart(msg);
         }
       },
 
-      // Start with audio file
+      // Start with audio file (streamed through an <audio> element, not decoded into memory)
       async startFile(file) {
+        this.cleanup();
+        this.hideError();
+        let audioEl = null;
+
         try {
-          this.cleanup();
-          this.errorMsg.classList.remove('visible');
+          const audioContext = this.createAudioContext();
+          this.resumeAudio();
 
-          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-          if (audioContext.state === 'suspended') {
-            await audioContext.resume();
-          }
+          audioEl = new Audio();
+          this.audioEl = audioEl;
+          this.audioUrl = URL.createObjectURL(file);
+          audioEl.src = this.audioUrl;
+          audioEl.loop = true;
+          audioEl.addEventListener('play', () => this.updatePlayPauseBtn());
+          audioEl.addEventListener('pause', () => this.updatePlayPauseBtn());
+          audioEl.addEventListener('error', () => {
+            if (this.audioEl === audioEl) {
+              this.returnToStart('Could not load audio file. Unsupported format.');
+            }
+          });
 
-          const arrayBuffer = await file.arrayBuffer();
-          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-
-          const source = audioContext.createBufferSource();
-          source.buffer = audioBuffer;
-          source.loop = true;
-
+          const source = audioContext.createMediaElementSource(audioEl);
           // Also connect to destination so the user hears the audio
           source.connect(audioContext.destination);
-          source.start(0);
-
           this.audioSource = source;
-          this.initVisualizer(audioContext, source);
+          this.initVisualizer(source);
+          this.playPauseBtn.hidden = false;
+
+          try {
+            await audioEl.play();
+          } catch (err) {
+            // No user activation left after the file picker: wait for a tap on play / canvas
+            if (err.name !== 'NotAllowedError') throw err;
+            if (this.audioEl === audioEl) this.autoplayBlocked = true;
+          }
+          this.updatePlayPauseBtn();
 
         } catch (err) {
+          // Already torn down (error event fired, or a newer session started)
+          if (audioEl && this.audioEl !== audioEl) return;
           console.error('Error:', err);
-          this.errorMsg.textContent = 'Could not load audio file. ' + (err.message || 'Unsupported format.');
-          this.errorMsg.classList.add('visible');
+          this.returnToStart('Could not load audio file. ' + (err.message || 'Unsupported format.'));
         }
+      },
+
+      togglePlayback() {
+        if (!this.audioEl) return;
+        this.resumeAudio();
+        this.autoplayBlocked = false;
+        if (this.audioEl.paused) {
+          this.audioEl.play().catch(err => console.error('Playback error:', err));
+        } else {
+          this.audioEl.pause();
+        }
+      },
+
+      updatePlayPauseBtn() {
+        this.playPauseBtn.classList.toggle('paused', !this.audioEl || this.audioEl.paused);
       },
 
       // Handle WebGL context loss
@@ -812,6 +1091,13 @@
 
         this.canvas.addEventListener('webglcontextrestored', () => {
           this.contextLost = false;
+          try {
+            this.rebuildVisualizer();
+          } catch (err) {
+            console.error('Error:', err);
+            this.returnToStart('Graphics were reset and could not be restored. Please start again.');
+            return;
+          }
           if (this.isCycling) this.startCycleInterval();
         });
       },
@@ -830,6 +1116,8 @@
           this.cycleDuration = val;
           this.saveSettings();
           if (this.isCycling) this.startCycleInterval();
+        } else {
+          this.cycleDurationInput.value = this.cycleDuration;
         }
       },
 
@@ -839,16 +1127,63 @@
         this.saveSettings();
       },
 
+      // Update render resolution
+      updateRenderScale() {
+        const val = this.renderScaleInput.value;
+        if (!RENDER_SCALES.includes(val)) return;
+        this.renderScale = val;
+        this.saveSettings();
+        this.resize();
+      },
+
+      // Handle keyboard shortcuts
+      onKeyDown(e) {
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
+        const tag = e.target.tagName;
+        if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+
+        if (e.key === 'Escape') {
+          if (this.settingsOpen) {
+            this.toggleSettings();
+          } else if (this.controlsHidden) {
+            this.setControlsHidden(false);
+          }
+          return;
+        }
+
+        // Everything else needs a running visualizer
+        if (!this.visualizer) return;
+
+        switch (e.key.length === 1 ? e.key.toLowerCase() : e.key) {
+          case 'f': this.toggleFullscreen(); break;
+          case 'r': this.randomPreset(); break;
+          case 'c': this.toggleCycle(); break;
+          case 'h': this.toggleControls(); break;
+          case 's': this.toggleSettings(); break;
+          case 'd': this.toggleFavorite(); break;
+          case 'p': this.togglePlayback(); break;
+          case 'ArrowRight': this.nextPreset(); break;
+          case 'ArrowLeft': this.prevPreset(); break;
+        }
+      },
+
       // Bind all events
       bindEvents() {
         this.startBtn.addEventListener('click', () => this.startMic());
 
         this.audioFileInput.addEventListener('change', (e) => {
           const file = e.target.files[0];
+          // Reset so picking the same file again still fires change
+          e.target.value = '';
           if (file) this.startFile(file);
         });
 
-        this.presetSelect.addEventListener('change', () => this.loadPreset(this.presetSelect.value));
+        this.presetSelect.addEventListener('change', () => {
+          this.loadPreset(this.presetSelect.value);
+          // Let temporarily-shown controls auto-hide again
+          if (this.controlsTimeout) this.presetSelect.blur();
+        });
+        this.playPauseBtn.addEventListener('click', () => this.togglePlayback());
         this.prevBtn.addEventListener('click', () => this.prevPreset());
         this.nextBtn.addEventListener('click', () => this.nextPreset());
         this.randomBtn.addEventListener('click', () => this.randomPreset());
@@ -856,14 +1191,25 @@
         this.settingsBtn.addEventListener('click', () => this.toggleSettings());
         this.settingsClose.addEventListener('click', () => this.toggleSettings());
         this.cycleDurationInput.addEventListener('change', () => this.updateCycleDuration());
-        this.cycleDurationInput.addEventListener('input', () => this.updateCycleDuration());
         this.favoritesOnlyInput.addEventListener('change', () => this.updateFavoritesOnly());
+        this.renderScaleInput.addEventListener('change', () => this.updateRenderScale());
         this.favBtn.addEventListener('click', () => this.toggleFavorite());
         this.fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
         this.hideBtn.addEventListener('click', () => this.toggleControls());
         window.addEventListener('resize', () => this.resize());
 
+        // Interacting with temporarily-shown controls keeps them up
+        ['pointerdown', 'keydown', 'change'].forEach(type => {
+          this.controls.addEventListener(type, () => {
+            if (this.controlsTimeout) this.scheduleAutoHide();
+          });
+        });
+
         this.canvas.addEventListener('click', () => {
+          // A tap is a user gesture: use it to unlock audio iOS may have suspended
+          this.resumeAudio();
+          if (this.autoplayBlocked) this.togglePlayback();
+
           if (this.settingsOpen) {
             this.toggleSettings();
           } else if (this.controlsHidden) {
@@ -871,17 +1217,13 @@
           }
         });
 
-        document.addEventListener('keydown', (e) => {
-          if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
-          if (e.key === 'f') this.toggleFullscreen();
-          if (e.key === 'r') this.randomPreset();
-          if (e.key === 'c') this.toggleCycle();
-          if (e.key === 'h' || e.key === 'Escape') this.toggleControls();
-          if (e.key === 's') this.toggleSettings();
-          if (e.key === 'd') this.toggleFavorite();
-          if (e.key === 'ArrowRight') this.nextPreset();
-          if (e.key === 'ArrowLeft') this.prevPreset();
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState !== 'visible') return;
+          this.resumeAudio();
+          if (this.micNeedsReconnect) this.reconnectMic();
         });
+
+        document.addEventListener('keydown', (e) => this.onKeyDown(e));
 
         this.setupContextHandlers();
       },
@@ -890,6 +1232,13 @@
       init() {
         this.loadSettings();
         this.bindEvents();
+        this.fullscreenBtn.hidden = !this.isFullscreenSupported();
+
+        if (!butterchurn || !butterchurnPresets) {
+          this.startBtn.disabled = true;
+          this.audioFileInput.disabled = true;
+          this.showError('Could not load the visualizer. Check your connection and reload.');
+        }
       }
     };
 
