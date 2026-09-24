@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -42,6 +42,11 @@
       --text-dim: #666;
       --accent: #00ff88;
       --accent-dim: rgba(0, 255, 136, 0.2);
+      /* Keep UI clear of the notch and home indicator (needs viewport-fit=cover) */
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
     }
 
     body {
@@ -63,11 +68,12 @@
     }
 
     .controls {
+      --edge: 20px;
       position: fixed;
       bottom: 0;
       left: 0;
       right: 0;
-      padding: 20px;
+      padding: var(--edge) calc(var(--edge) + var(--safe-right)) calc(var(--edge) + var(--safe-bottom)) calc(var(--edge) + var(--safe-left));
       background: linear-gradient(transparent, rgba(0,0,0,0.8) 30%);
       z-index: 10;
       display: flex;
@@ -160,7 +166,7 @@
       align-items: center;
       justify-content: center;
       gap: 24px;
-      padding: 40px;
+      padding: calc(40px + var(--safe-top)) calc(40px + var(--safe-right)) calc(40px + var(--safe-bottom)) calc(40px + var(--safe-left));
       text-align: center;
     }
 
@@ -259,7 +265,7 @@
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border-top: 1px solid var(--surface-hover);
-      padding: 20px;
+      padding: 20px calc(20px + var(--safe-right)) calc(20px + var(--safe-bottom)) calc(20px + var(--safe-left));
       z-index: 15;
       transform: translateY(100%);
       transition: transform 0.3s;
@@ -368,7 +374,7 @@
 
     @media (max-width: 600px) {
       .controls {
-        padding: 16px;
+        --edge: 16px;
       }
 
       button {
