@@ -1,27 +1,28 @@
 # Butterchurn iOS
 
-A mobile-friendly Butterchurn (Milkdrop) visualizer that works on iOS Safari.
+A mobile-friendly [Butterchurn](https://github.com/jberg/butterchurn) (Milkdrop) music visualizer that works on iPhone and iPad.
 
-The [official butterchurnviz.com](https://butterchurnviz.com) uses the deprecated `navigator.getUserMedia` API which doesn't work on iOS. This version uses the modern `navigator.mediaDevices.getUserMedia()` API.
+The [official butterchurnviz.com](https://butterchurnviz.com) uses the deprecated `navigator.getUserMedia` API, which doesn't work on iOS. This version uses the modern `navigator.mediaDevices.getUserMedia()` API and is built for touch screens.
 
-## Demo
+**[Open the live demo](https://pxl-pshr.github.io/butterchurn-ios/)**
 
-[Live Demo](https://pxl-pshr.github.io/butterchurn-ios/)
+## How to use
+
+1. Open the demo in Safari (or any modern browser).
+2. Tap **Enable Microphone** to visualize whatever is playing around you, or **Load Audio File** to play a song from your device.
+3. Tap the canvas to bring the controls back after hiding them.
+
+**Fullscreen on iPhone:** iPhone Safari doesn't allow web pages to go fullscreen. Instead, tap **Share → Add to Home Screen** and launch it from there. It opens fullscreen and works offline.
 
 ## Features
 
-- Works on iOS Safari and iPad
-- Microphone input for live audio visualization
-- Audio file playback (streamed, with play/pause) when a mic isn't available
-- 100+ Milkdrop presets included
-- Random preset / auto-cycle mode with adjustable interval
+- Live microphone input, or audio file playback with play/pause
+- 100 Milkdrop presets with previous/next, random, and auto-cycle
 - Favorites, with an option to cycle through favorites only
-- Adjustable render resolution for slower devices
-- Prev/next preset buttons for mobile
-- Fullscreen support (where the browser allows it; on iPhone, add to Home Screen instead)
+- Adjustable cycle interval and render resolution (lower it if a preset stutters)
 - Auto-hiding controls with tap-to-reveal
-- Recovers from iOS audio interruptions and GPU context resets
-- PWA support (installable, works offline; all dependencies are bundled in `vendor/`)
+- Settings and favorites are remembered between visits
+- Installable as an app and works offline
 
 ## Keyboard shortcuts
 
@@ -39,9 +40,15 @@ The [official butterchurnviz.com](https://butterchurnviz.com) uses the deprecate
 
 ## Development
 
-It's a static site with no build step. Serve the folder over HTTP(S), e.g. `python3 -m http.server`, and open it in a browser. Microphone access needs HTTPS or `localhost`.
+It's a static site with no build step. Serve the folder and open it in a browser:
 
-The service worker fetches pages network-first, so deploys reach users on their next load. If you add files that should work offline, add them to `PRECACHE_URLS` in `sw.js` and bump `CACHE_NAME`.
+```bash
+python3 -m http.server
+```
+
+Microphone access needs HTTPS or `localhost`. Butterchurn, the presets, and the font are bundled in `vendor/`, so there are no external requests.
+
+The service worker loads pages network-first, so deploys reach users on their next visit. If you add files that should work offline, add them to `PRECACHE_URLS` in `sw.js` and bump `CACHE_NAME`.
 
 ## Credits
 
