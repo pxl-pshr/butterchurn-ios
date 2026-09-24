@@ -1,5 +1,7 @@
 # Butterchurn iOS
 
+![Butterchurn visualizer running a Milkdrop preset](docs/screenshot.jpg)
+
 A mobile-friendly [Butterchurn](https://github.com/jberg/butterchurn) (Milkdrop) music visualizer that works on iPhone and iPad.
 
 The [official butterchurnviz.com](https://butterchurnviz.com) uses the deprecated `navigator.getUserMedia` API, which doesn't work on iOS. This version uses the modern `navigator.mediaDevices.getUserMedia()` API and is built for touch screens.
