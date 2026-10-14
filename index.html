@@ -202,6 +202,12 @@
       background: #00ffaa;
     }
 
+    button:disabled,
+    .file-label:has(input:disabled) {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
     .start-actions {
       display: flex;
       flex-direction: column;
@@ -221,11 +227,17 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      position: relative;
     }
 
     .file-label:hover {
       background: var(--surface-hover);
       border-color: var(--accent-dim);
+    }
+
+    .file-label:has(input:focus-visible) {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
     }
 
     .file-label svg {
@@ -234,8 +246,14 @@
       fill: currentColor;
     }
 
+    /* Visually hidden but still focusable, so the file picker can be opened from the keyboard */
     #audioFileInput {
-      display: none;
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      overflow: hidden;
+      pointer-events: none;
     }
 
     .start-divider {
@@ -335,6 +353,11 @@
     .setting-row select {
       flex: 0 0 auto;
       padding: 8px 36px 8px 12px;
+    }
+
+    .setting-row button {
+      padding: 8px 12px;
+      font-size: 12px;
     }
 
     .setting-row input[type="checkbox"] {
@@ -465,11 +488,14 @@
     <div class="setting-row" style="margin-top: 12px;">
       <label for="renderScale">Render resolution</label>
       <select id="renderScale">
-        <option value="auto">Auto (up to 2x)</option>
+        <option value="auto">Auto</option>
         <option value="1">1x (fastest)</option>
         <option value="1.5">1.5x</option>
         <option value="2">2x (sharpest)</option>
       </select>
+    </div>
+    <div class="setting-row" style="margin-top: 12px;">
+      <button id="changeSourceBtn">Change audio source</button>
     </div>
     <div style="margin-top: 16px; text-align: center;">
       <a class="github-link" href="https://github.com/pxl-pshr/butterchurn-ios" target="_blank" rel="noopener">
@@ -479,8 +505,8 @@
     </div>
   </div>
 
-<script src="vendor/butterchurn.min.js"></script>
-<script src="vendor/butterchurnPresets.min.js"></script>
+<script src="vendor/butterchurn-2.6.7.min.js"></script>
+<script src="vendor/butterchurnPresets-2.4.7.min.js"></script>
 <script type="module">
     // Vendored UMD builds (see vendor/LICENSES.txt)
     const butterchurn = window.butterchurn && window.butterchurn.default;
@@ -495,6 +521,7 @@
     };
     const RENDER_SCALES = ['auto', '1', '1.5', '2'];
     const CONTROLS_AUTO_HIDE_MS = 4000;
+    const GRAPHICS_ERROR_MSG = 'Could not start the graphics. This browser or device may not support WebGL 2.';
 
     const app = {
       // DOM
@@ -520,6 +547,7 @@
       favBtn: document.getElementById('favBtn'),
       favoritesOnlyInput: document.getElementById('favoritesOnly'),
       renderScaleInput: document.getElementById('renderScale'),
+      changeSourceBtn: document.getElementById('changeSourceBtn'),
 
       // State
       audioContext: null,
@@ -541,6 +569,7 @@
       micNeedsReconnect: false,
       reconnectingMic: false,
       contextLost: false,
+      canvasUsed: false,
       settingsOpen: false,
       cycleDuration: 15,
       renderScale: 'auto',
@@ -709,7 +738,8 @@
       // Pixel ratio to render at, per the render resolution setting
       getPixelRatio() {
         const dpr = window.devicePixelRatio || 1;
-        if (this.renderScale === 'auto') return Math.min(dpr, 2);
+        // Auto: on phone screens denser than 2x, 1.5x looks nearly as sharp and draws ~44% fewer pixels
+        if (this.renderScale === 'auto') return dpr > 2 ? 1.5 : dpr;
         return Math.min(parseFloat(this.renderScale), Math.max(dpr, 1));
       },
 
@@ -733,10 +763,11 @@
 
       // Render loop
       render() {
+        // Schedule first so a frame that throws (e.g. a broken preset) can't stop the loop
+        this.animationId = requestAnimationFrame(() => this.render());
         if (this.visualizer && !this.contextLost) {
           this.visualizer.render();
         }
-        this.animationId = requestAnimationFrame(() => this.render());
       },
 
       // Stop render loop
@@ -780,6 +811,14 @@
         this.controlsTimeout = null;
         this.controlsHidden = hidden;
         this.controls.classList.toggle('hidden', hidden);
+        this.updateInert();
+      },
+
+      // Keep keyboard focus out of UI that's hidden or covered by the start screen
+      updateInert() {
+        const onStart = !this.startOverlay.classList.contains('hidden');
+        this.controls.inert = onStart || this.controlsHidden;
+        this.settingsPanel.inert = !this.settingsOpen;
       },
 
       // Toggle controls visibility
@@ -877,6 +916,7 @@
         }
 
         this.visualizer = null;
+        if (this.canvasUsed) this.resetCanvas();
         this.isCycling = false;
         this.cycleBtn.classList.remove('active');
         this.contextLost = false;
@@ -885,25 +925,66 @@
         this.playPauseBtn.hidden = true;
       },
 
-      // Tear down and go back to the start screen with a message
+      // Tear down and go back to the start screen, optionally with an error message
       returnToStart(msg) {
         this.cleanup();
         if (this.settingsOpen) this.toggleSettings();
-        this.setControlsHidden(false);
         this.startOverlay.classList.remove('hidden');
-        this.showError(msg);
+        this.setControlsHidden(false);
+        if (msg) {
+          this.showError(msg);
+        } else {
+          this.hideError();
+        }
+      },
+
+      // Butterchurn needs WebGL 2 (iOS 15+). Test on a spare canvas so the real one
+      // still gets the context settings Butterchurn asks for.
+      isWebGL2Supported() {
+        try {
+          const gl = document.createElement('canvas').getContext('webgl2');
+          if (!gl) return false;
+          const ext = gl.getExtension('WEBGL_lose_context');
+          if (ext) ext.loseContext();
+          return true;
+        } catch {
+          return false;
+        }
+      },
+
+      // Swap in a fresh canvas between sessions. Butterchurn can't free a visualizer, so
+      // reusing the canvas would pile each session's GPU buffers on top of the last one's.
+      resetCanvas() {
+        const old = this.canvas;
+        const canvas = old.cloneNode(false);
+        old.replaceWith(canvas);
+        this.canvas = canvas;
+        this.canvasUsed = false;
+        this.bindCanvasEvents(canvas);
+        // Free the old context's GPU memory now instead of whenever it's garbage collected
+        const gl = old.getContext('webgl2');
+        const ext = gl && gl.getExtension('WEBGL_lose_context');
+        if (ext) ext.loseContext();
       },
 
       // Create the visualizer on the canvas and feed it from inputGain
       createVisualizer() {
         this.visualizer = null;
         this.resize();
-        this.visualizer = butterchurn.createVisualizer(this.audioContext, this.canvas, {
-          width: this.canvas.width,
-          height: this.canvas.height,
-          pixelRatio: 1,
-          textureRatio: 1
-        });
+        this.canvasUsed = true;
+        try {
+          this.visualizer = butterchurn.createVisualizer(this.audioContext, this.canvas, {
+            width: this.canvas.width,
+            height: this.canvas.height,
+            pixelRatio: 1,
+            textureRatio: 1
+          });
+        } catch (cause) {
+          // Tagged so the start functions don't blame the mic or the audio file
+          const err = new Error(GRAPHICS_ERROR_MSG, { cause });
+          err.name = 'GraphicsError';
+          throw err;
+        }
         this.visualizer.connectAudio(this.inputGain);
       },
 
@@ -930,6 +1011,7 @@
 
         this.hideError();
         this.startOverlay.classList.add('hidden');
+        this.updateInert();
         this.render();
       },
 
@@ -1008,6 +1090,10 @@
           // Superseded by a newer session: don't tear that one down
           if (audioContext && this.audioContext !== audioContext) return;
           console.error('Error:', err);
+          if (err.name === 'GraphicsError') {
+            this.returnToStart(err.message);
+            return;
+          }
           let msg = 'Could not access microphone. ';
 
           if (err.name === 'NotAllowedError') {
@@ -1065,7 +1151,9 @@
           // Already torn down (error event fired, or a newer session started)
           if (audioEl && this.audioEl !== audioEl) return;
           console.error('Error:', err);
-          this.returnToStart('Could not load audio file. ' + (err.message || 'Unsupported format.'));
+          this.returnToStart(err.name === 'GraphicsError'
+            ? err.message
+            : 'Could not load audio file. ' + (err.message || 'Unsupported format.'));
         }
       },
 
@@ -1084,9 +1172,22 @@
         this.playPauseBtn.classList.toggle('paused', !this.audioEl || this.audioEl.paused);
       },
 
-      // Handle WebGL context loss
-      setupContextHandlers() {
-        this.canvas.addEventListener('webglcontextlost', (e) => {
+      // Taps and WebGL context loss. Events from a canvas resetCanvas() replaced are ignored.
+      bindCanvasEvents(canvas) {
+        canvas.addEventListener('click', () => {
+          // A tap is a user gesture: use it to unlock audio iOS may have suspended
+          this.resumeAudio();
+          if (this.autoplayBlocked) this.togglePlayback();
+
+          if (this.settingsOpen) {
+            this.toggleSettings();
+          } else if (this.controlsHidden) {
+            this.showControlsTemporarily();
+          }
+        });
+
+        canvas.addEventListener('webglcontextlost', (e) => {
+          if (canvas !== this.canvas) return;
           e.preventDefault();
           this.contextLost = true;
           if (this.cycleInterval) {
@@ -1095,7 +1196,8 @@
           }
         });
 
-        this.canvas.addEventListener('webglcontextrestored', () => {
+        canvas.addEventListener('webglcontextrestored', () => {
+          if (canvas !== this.canvas) return;
           this.contextLost = false;
           try {
             this.rebuildVisualizer();
@@ -1113,6 +1215,7 @@
         this.settingsOpen = !this.settingsOpen;
         this.settingsPanel.classList.toggle('open', this.settingsOpen);
         this.settingsBtn.classList.toggle('active', this.settingsOpen);
+        this.updateInert();
       },
 
       // Update cycle duration from input
@@ -1145,9 +1248,8 @@
       // Handle keyboard shortcuts
       onKeyDown(e) {
         if (e.metaKey || e.ctrlKey || e.altKey) return;
-        const tag = e.target.tagName;
-        if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
 
+        // Esc works even while a settings field has focus
         if (e.key === 'Escape') {
           if (this.settingsOpen) {
             this.toggleSettings();
@@ -1156,6 +1258,9 @@
           }
           return;
         }
+
+        const tag = e.target.tagName;
+        if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
 
         // Everything else needs a running visualizer
         if (!this.visualizer) return;
@@ -1186,8 +1291,9 @@
 
         this.presetSelect.addEventListener('change', () => {
           this.loadPreset(this.presetSelect.value);
-          // Let temporarily-shown controls auto-hide again
-          if (this.controlsTimeout) this.presetSelect.blur();
+          // Release focus so letter keys work as shortcuts again (instead of jumping
+          // through the list) and temporarily-shown controls can auto-hide
+          this.presetSelect.blur();
         });
         this.playPauseBtn.addEventListener('click', () => this.togglePlayback());
         this.prevBtn.addEventListener('click', () => this.prevPreset());
@@ -1199,6 +1305,7 @@
         this.cycleDurationInput.addEventListener('change', () => this.updateCycleDuration());
         this.favoritesOnlyInput.addEventListener('change', () => this.updateFavoritesOnly());
         this.renderScaleInput.addEventListener('change', () => this.updateRenderScale());
+        this.changeSourceBtn.addEventListener('click', () => this.returnToStart());
         this.favBtn.addEventListener('click', () => this.toggleFavorite());
         this.fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
         this.hideBtn.addEventListener('click', () => this.toggleControls());
@@ -1211,18 +1318,6 @@
           });
         });
 
-        this.canvas.addEventListener('click', () => {
-          // A tap is a user gesture: use it to unlock audio iOS may have suspended
-          this.resumeAudio();
-          if (this.autoplayBlocked) this.togglePlayback();
-
-          if (this.settingsOpen) {
-            this.toggleSettings();
-          } else if (this.controlsHidden) {
-            this.showControlsTemporarily();
-          }
-        });
-
         document.addEventListener('visibilitychange', () => {
           if (document.visibilityState !== 'visible') return;
           this.resumeAudio();
@@ -1231,19 +1326,26 @@
 
         document.addEventListener('keydown', (e) => this.onKeyDown(e));
 
-        this.setupContextHandlers();
+        this.bindCanvasEvents(this.canvas);
+      },
+
+      disableStart(msg) {
+        this.startBtn.disabled = true;
+        this.audioFileInput.disabled = true;
+        this.showError(msg);
       },
 
       // Boot
       init() {
         this.loadSettings();
         this.bindEvents();
+        this.updateInert();
         this.fullscreenBtn.hidden = !this.isFullscreenSupported();
 
         if (!butterchurn || !butterchurnPresets) {
-          this.startBtn.disabled = true;
-          this.audioFileInput.disabled = true;
-          this.showError('Could not load the visualizer. Check your connection and reload.');
+          this.disableStart('Could not load the visualizer. Check your connection and reload.');
+        } else if (!this.isWebGL2Supported()) {
+          this.disableStart('This browser does not support WebGL 2, which the visualizer needs. On iPhone and iPad, update to iOS 15 or later.');
         }
       }
     };
