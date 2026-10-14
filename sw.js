@@ -1,13 +1,15 @@
 // Bump when the precache list changes so old caches get purged on activate.
-const CACHE_NAME = 'butterchurn-v2';
+const CACHE_NAME = 'butterchurn-v3';
+// Vendored scripts have their version in the file name. Never update one in place: the first
+// launch after a deploy would run the new page against the old cached script.
 const PRECACHE_URLS = [
   './',
   './index.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
-  './vendor/butterchurn.min.js',
-  './vendor/butterchurnPresets.min.js',
+  './vendor/butterchurn-2.6.7.min.js',
+  './vendor/butterchurnPresets-2.4.7.min.js',
   './vendor/jetbrains-mono-latin-400-normal.woff2',
   './vendor/jetbrains-mono-latin-700-normal.woff2'
 ];
