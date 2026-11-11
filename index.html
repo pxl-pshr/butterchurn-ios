@@ -66,6 +66,37 @@
       width: 100%;
       height: 100%;
       z-index: 0;
+      /* Swipes on the canvas are ours (next / previous preset), not the browser's */
+      touch-action: none;
+    }
+
+    /* The mouse pointer goes away with the controls */
+    .controls-hidden #canvas {
+      cursor: none;
+    }
+
+    /* Preset name, shown briefly when it changes while the controls are hidden */
+    .toast {
+      position: fixed;
+      top: calc(16px + var(--safe-top));
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: calc(100% - 32px - var(--safe-left) - var(--safe-right));
+      padding: 8px 14px;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.6);
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      z-index: 5;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .toast.visible {
+      opacity: 1;
     }
 
     .controls {
@@ -341,6 +372,10 @@
       gap: 12px;
     }
 
+    .setting-row + .setting-row {
+      margin-top: 12px;
+    }
+
     .setting-row label {
       font-size: 13px;
       color: var(--text-dim);
@@ -390,6 +425,11 @@
       height: 18px;
       accent-color: var(--accent);
       cursor: pointer;
+    }
+
+    .settings-footer {
+      margin-top: 16px;
+      text-align: center;
     }
 
     .github-link {
@@ -488,6 +528,7 @@
 </head>
 <body>
   <canvas id="canvas"></canvas>
+  <div class="toast" id="presetToast" role="status"></div>
 
   <div class="start-overlay" id="startOverlay">
     <div class="start-content">
@@ -543,7 +584,7 @@
         <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg>
         <span class="label">Settings</span>
       </button>
-      <button id="hideBtn" title="Hide Controls" aria-pressed="false">
+      <button id="hideBtn" title="Auto-hide Controls" aria-pressed="true">
         <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
         <span class="label">Hide</span>
       </button>
@@ -560,11 +601,15 @@
       <input type="number" id="cycleDuration" min="1" max="300" value="15">
       <span class="unit">sec</span>
     </div>
-    <div class="setting-row" style="margin-top: 12px;">
+    <div class="setting-row">
       <label for="favoritesOnly">Favorites only</label>
       <input type="checkbox" id="favoritesOnly">
     </div>
-    <div class="setting-row" style="margin-top: 12px;">
+    <div class="setting-row">
+      <label for="showPresetNames">Show preset names</label>
+      <input type="checkbox" id="showPresetNames" checked>
+    </div>
+    <div class="setting-row">
       <label for="renderScale">Render resolution</label>
       <select id="renderScale">
         <option value="auto">Auto</option>
@@ -573,10 +618,10 @@
         <option value="2">2x (sharpest)</option>
       </select>
     </div>
-    <div class="setting-row" style="margin-top: 12px;">
+    <div class="setting-row">
       <button id="changeSourceBtn">Change Audio Source</button>
     </div>
-    <div style="margin-top: 16px; text-align: center;">
+    <div class="settings-footer">
       <a class="github-link" href="https://github.com/pxl-pshr/butterchurn-ios" target="_blank" rel="noopener">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
         GitHub
@@ -602,6 +647,9 @@
     // Auto render resolution stays under about this many pixels (a bit more than a 1080p frame)
     const AUTO_MAX_PIXELS = 2.25e6;
     const CONTROLS_AUTO_HIDE_MS = 4000;
+    const PRESET_NAME_MS = 2500;
+    // A swipe is a mostly horizontal drag of at least this many pixels
+    const SWIPE_MIN_PX = 60;
     const GRAPHICS_ERROR_MSG = 'Could not start the graphics. This browser or device may not support WebGL 2.';
 
     // True when the focused element needs the keys itself (typing a number, jumping through a list)
@@ -613,6 +661,7 @@
     const app = {
       // DOM
       canvas: document.getElementById('canvas'),
+      presetToast: document.getElementById('presetToast'),
       startOverlay: document.getElementById('startOverlay'),
       startBtn: document.getElementById('startBtn'),
       errorMsg: document.getElementById('errorMsg'),
@@ -633,6 +682,7 @@
       cycleDurationInput: document.getElementById('cycleDuration'),
       favBtn: document.getElementById('favBtn'),
       favoritesOnlyInput: document.getElementById('favoritesOnly'),
+      showPresetNamesInput: document.getElementById('showPresetNames'),
       renderScaleInput: document.getElementById('renderScale'),
       changeSourceBtn: document.getElementById('changeSourceBtn'),
 
@@ -648,6 +698,9 @@
       isCycling: false,
       controlsHidden: false,
       controlsTimeout: null,
+      autoHide: true,
+      ignoreMouseUntil: 0,
+      toastTimeout: null,
       mediaStream: null,
       audioSource: null,
       audioEl: null,
@@ -663,6 +716,7 @@
       renderScale: 'auto',
       favorites: new Set(),
       favoritesOnly: false,
+      showPresetNames: true,
 
       // Load settings from localStorage
       loadSettings() {
@@ -684,6 +738,13 @@
             this.renderScale = data.renderScale;
             this.renderScaleInput.value = data.renderScale;
           }
+          if (typeof data.autoHide === 'boolean') {
+            this.autoHide = data.autoHide;
+          }
+          if (data.showPresetNames === false) {
+            this.showPresetNames = false;
+            this.showPresetNamesInput.checked = false;
+          }
         } catch {}
       },
 
@@ -694,7 +755,9 @@
             cycleDuration: this.cycleDuration,
             favorites: [...this.favorites],
             favoritesOnly: this.favoritesOnly,
-            renderScale: this.renderScale
+            renderScale: this.renderScale,
+            autoHide: this.autoHide,
+            showPresetNames: this.showPresetNames
           }));
         } catch {}
       },
@@ -766,10 +829,12 @@
       loadPreset(name, blendTime = 1.0) {
         if (!this.visualizer || !this.presets[name]) return;
 
+        const changed = name !== this.currentPreset;
         this.visualizer.loadPreset(this.presets[name], blendTime);
         this.currentPreset = name;
         this.presetSelect.value = name;
         this.updateFavBtn();
+        if (changed) this.showPresetName(name);
         // Any change restarts the cycle countdown, so a preset picked by hand gets its full time
         if (this.cycleInterval) this.startCycleInterval();
       },
@@ -910,19 +975,8 @@
         this.controlsTimeout = null;
         this.controlsHidden = hidden;
         this.controls.classList.toggle('hidden', hidden);
+        document.body.classList.toggle('controls-hidden', hidden);
         this.updateInert();
-        this.updateHideBtn();
-      },
-
-      // Hide mode: the controls are hidden, or up for a few seconds after a tap
-      isHideMode() {
-        return this.controlsHidden || this.controlsTimeout !== null;
-      },
-
-      updateHideBtn() {
-        const on = this.isHideMode();
-        this.hideBtn.classList.toggle('active', on);
-        this.hideBtn.setAttribute('aria-pressed', on);
       },
 
       isStartScreenOpen() {
@@ -935,31 +989,48 @@
         this.settingsPanel.inert = !this.settingsOpen;
       },
 
-      // Hide button / H: switch hide mode on or off. Turning it off while the controls
-      // are up after a tap keeps them up.
-      toggleControls() {
-        this.setControlsHidden(!this.isHideMode());
+      // Bring the controls up. With auto-hide on, they go away again after a few seconds.
+      showControls() {
+        this.setControlsHidden(false);
+        if (this.autoHide) this.scheduleAutoHide();
       },
 
-      // Show controls temporarily (auto-hide after delay)
-      showControlsTemporarily() {
-        if (!this.controlsHidden) return;
-        this.setControlsHidden(false);
-        this.scheduleAutoHide();
+      // Eye button / H. On: the controls go away until the next tap. Off: they stay on
+      // screen. Remembered between visits.
+      setAutoHide(on) {
+        this.autoHide = on;
+        this.updateHideBtn();
+        this.setControlsHidden(on);
+        this.saveSettings();
+      },
+
+      updateHideBtn() {
+        this.hideBtn.classList.toggle('active', this.autoHide);
+        this.hideBtn.setAttribute('aria-pressed', this.autoHide);
       },
 
       // (Re)start the auto-hide timer
       scheduleAutoHide() {
         clearTimeout(this.controlsTimeout);
         this.controlsTimeout = setTimeout(() => {
-          // Don't hide while the preset list is open
-          if (document.activeElement === this.presetSelect) {
+          // Don't hide while the preset list or the settings panel is open
+          if (document.activeElement === this.presetSelect || this.settingsOpen) {
             this.scheduleAutoHide();
             return;
           }
           this.setControlsHidden(true);
         }, CONTROLS_AUTO_HIDE_MS);
-        this.updateHideBtn();
+      },
+
+      // Flash the preset name while the controls, and the preset list with them, are hidden
+      showPresetName(name) {
+        if (!this.showPresetNames || !this.controlsHidden) return;
+        this.presetToast.textContent = name;
+        this.presetToast.classList.add('visible');
+        clearTimeout(this.toastTimeout);
+        this.toastTimeout = setTimeout(() => {
+          this.presetToast.classList.remove('visible');
+        }, PRESET_NAME_MS);
       },
 
       // Create the AudioContext and track it immediately so cleanup() can always close it
@@ -1103,7 +1174,7 @@
         this.startOverlay.classList.remove('switching');
         this.cancelSourceBtn.hidden = true;
         this.startOverlay.classList.add('hidden');
-        this.updateInert();
+        this.showControls();
       },
 
       // Butterchurn needs WebGL 2 (iOS 15+). Test on a spare canvas so the real one
@@ -1185,7 +1256,7 @@
 
         this.hideError();
         this.startOverlay.classList.add('hidden');
-        this.updateInert();
+        this.showControls();
         this.render();
         this.requestWakeLock();
       },
@@ -1350,9 +1421,15 @@
         this.playPauseBtn.title = paused ? 'Play' : 'Pause';
       },
 
-      // Taps and WebGL context loss. Events from a canvas resetCanvas() replaced are ignored.
+      // Taps, swipes, mouse movement and WebGL context loss. Events from a canvas
+      // resetCanvas() replaced are ignored.
       bindCanvasEvents(canvas) {
-        canvas.addEventListener('click', () => {
+        let swipe = null;
+        let swipedAt = -Infinity;
+
+        canvas.addEventListener('click', (e) => {
+          // The click some browsers send after a swipe isn't a tap
+          if (e.timeStamp - swipedAt < 500) return;
           // A tap is a user gesture: use it to unlock audio iOS may have suspended
           this.resumeAudio();
           if (this.autoplayBlocked) this.togglePlayback();
@@ -1360,11 +1437,44 @@
           if (this.settingsOpen) {
             this.toggleSettings();
           } else if (this.controlsHidden) {
-            this.showControlsTemporarily();
-          } else if (this.controlsTimeout) {
-            // Up after a tap: a second tap puts them away again
+            this.showControls();
+          } else if (this.autoHide) {
+            // Up after a tap: a second tap puts them away again. Hold off the mouse-move
+            // reveal for a moment, or the hand settling after the click undoes it.
             this.setControlsHidden(true);
+            this.ignoreMouseUntil = e.timeStamp + 1000;
           }
+        });
+
+        // A moving mouse brings the controls up, like a tap does on a touch screen
+        canvas.addEventListener('pointermove', (e) => {
+          if (e.pointerType !== 'mouse' || (!e.movementX && !e.movementY)) return;
+          if (!this.autoHide || this.settingsOpen || e.timeStamp < this.ignoreMouseUntil) return;
+          if (this.controlsHidden) {
+            this.showControls();
+          } else {
+            this.scheduleAutoHide();
+          }
+        });
+
+        // Swipe left / right for the next / previous preset
+        canvas.addEventListener('pointerdown', (e) => {
+          const touch = e.pointerType !== 'mouse' && e.isPrimary;
+          swipe = touch ? { x: e.clientX, y: e.clientY } : null;
+        });
+
+        canvas.addEventListener('pointercancel', () => {
+          swipe = null;
+        });
+
+        canvas.addEventListener('pointerup', (e) => {
+          if (!swipe) return;
+          const dx = e.clientX - swipe.x;
+          const dy = e.clientY - swipe.y;
+          swipe = null;
+          if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dx) < 2 * Math.abs(dy)) return;
+          swipedAt = e.timeStamp;
+          this.stepPreset(dx < 0 ? 1 : -1);
         });
 
         canvas.addEventListener('webglcontextlost', (e) => {
@@ -1405,6 +1515,8 @@
         } else if (hadFocus) {
           this.settingsBtn.focus({ preventScroll: true });
         }
+        // Auto-hide waits while the panel is open; give the controls a full turn after it
+        if (!this.settingsOpen && this.controlsTimeout) this.scheduleAutoHide();
       },
 
       // Update cycle duration from input
@@ -1422,6 +1534,11 @@
       // Update favorites-only mode
       updateFavoritesOnly() {
         this.favoritesOnly = this.favoritesOnlyInput.checked;
+        this.saveSettings();
+      },
+
+      updateShowPresetNames() {
+        this.showPresetNames = this.showPresetNamesInput.checked;
         this.saveSettings();
       },
 
@@ -1448,8 +1565,8 @@
             this.cancelChangeSource();
           } else if (this.settingsOpen) {
             this.toggleSettings();
-          } else if (this.isHideMode()) {
-            this.setControlsHidden(false);
+          } else if (this.autoHide) {
+            this.setAutoHide(false);
           }
           return;
         }
@@ -1461,7 +1578,7 @@
           case 'f': this.toggleFullscreen(); break;
           case 'r': this.randomPreset(); break;
           case 'c': this.toggleCycle(); break;
-          case 'h': this.toggleControls(); break;
+          case 'h': this.setAutoHide(!this.autoHide); break;
           case 's': this.toggleSettings(); break;
           case 'd': this.toggleFavorite(); break;
           case 'p': this.togglePlayback(); break;
@@ -1500,16 +1617,17 @@
           if (e.key === 'Enter') this.cycleDurationInput.blur();
         });
         this.favoritesOnlyInput.addEventListener('change', () => this.updateFavoritesOnly());
+        this.showPresetNamesInput.addEventListener('change', () => this.updateShowPresetNames());
         this.renderScaleInput.addEventListener('change', () => this.updateRenderScale());
         this.changeSourceBtn.addEventListener('click', () => this.changeSource());
         this.cancelSourceBtn.addEventListener('click', () => this.cancelChangeSource());
         this.favBtn.addEventListener('click', () => this.toggleFavorite());
         this.fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
-        this.hideBtn.addEventListener('click', () => this.toggleControls());
+        this.hideBtn.addEventListener('click', () => this.setAutoHide(!this.autoHide));
         window.addEventListener('resize', () => this.resize());
 
-        // Interacting with temporarily-shown controls keeps them up
-        ['pointerdown', 'keydown', 'change'].forEach(type => {
+        // Using the controls, or moving the mouse over them, keeps them up
+        ['pointerdown', 'pointermove', 'keydown', 'change'].forEach(type => {
           this.controls.addEventListener(type, () => {
             if (this.controlsTimeout) this.scheduleAutoHide();
           });
@@ -1538,6 +1656,7 @@
         this.loadSettings();
         this.bindEvents();
         this.updateInert();
+        this.updateHideBtn();
         this.fullscreenBtn.hidden = !this.isFullscreenSupported();
 
         if (!butterchurn || !butterchurnPresets) {
