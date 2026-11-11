@@ -718,6 +718,15 @@
     ];
     const EXTRA_PRESETS_HINT = 'about 300 more';
 
+    // True when focus got there by keyboard. Browsers without :focus-visible throw on it.
+    function hasKeyboardFocus(el) {
+      try {
+        return el.matches(':focus-visible');
+      } catch {
+        return false;
+      }
+    }
+
     function loadScript(src) {
       return new Promise((resolve, reject) => {
         const script = document.createElement('script');
@@ -1177,8 +1186,11 @@
       scheduleAutoHide() {
         clearTimeout(this.controlsTimeout);
         this.controlsTimeout = setTimeout(() => {
-          // Don't hide while the preset list or the settings panel is open
-          if (document.activeElement === this.presetSelect || this.settingsOpen) {
+          // Don't hide while the preset list or the settings panel is open, or out from
+          // under someone tabbing through the controls
+          const focused = document.activeElement;
+          const tabbing = this.controls.contains(focused) && hasKeyboardFocus(focused);
+          if (focused === this.presetSelect || this.settingsOpen || tabbing) {
             this.scheduleAutoHide();
             return;
           }
@@ -1420,8 +1432,9 @@
 
         this.hideError();
         this.startOverlay.classList.add('hidden');
-        this.showControls();
         this.render();
+        // After the first frame, so a slow first draw doesn't eat into the auto-hide time
+        this.showControls();
         this.requestWakeLock();
       },
 
