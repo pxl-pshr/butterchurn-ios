@@ -420,6 +420,14 @@
       font-size: 12px;
     }
 
+    .setting-row input[type="range"] {
+      flex: 1;
+      min-width: 0;
+      max-width: 220px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
     .setting-row input[type="checkbox"] {
       width: 18px;
       height: 18px;
@@ -655,6 +663,11 @@
       <input type="checkbox" id="showPresetNames" checked>
     </div>
     <div class="setting-row">
+      <label for="sensitivity">Sensitivity</label>
+      <input type="range" id="sensitivity" min="0.5" max="4" step="0.25" value="1.5">
+      <span class="unit" id="sensitivityValue">1.5x</span>
+    </div>
+    <div class="setting-row">
       <label for="renderScale">Render resolution</label>
       <select id="renderScale">
         <option value="auto">Auto</option>
@@ -756,6 +769,8 @@
       extraPresetsInput: document.getElementById('extraPresets'),
       extraPresetsStatus: document.getElementById('extraPresetsStatus'),
       showPresetNamesInput: document.getElementById('showPresetNames'),
+      sensitivityInput: document.getElementById('sensitivity'),
+      sensitivityValue: document.getElementById('sensitivityValue'),
       renderScaleInput: document.getElementById('renderScale'),
       changeSourceBtn: document.getElementById('changeSourceBtn'),
 
@@ -794,6 +809,7 @@
       favorites: new Set(),
       favoritesOnly: false,
       showPresetNames: true,
+      sensitivity: 1.5,
 
       // Load settings from localStorage
       loadSettings() {
@@ -814,6 +830,11 @@
           if (RENDER_SCALES.includes(data.renderScale)) {
             this.renderScale = data.renderScale;
             this.renderScaleInput.value = data.renderScale;
+          }
+          if (data.sensitivity >= 0.5 && data.sensitivity <= 4) {
+            this.sensitivity = data.sensitivity;
+            this.sensitivityInput.value = data.sensitivity;
+            this.sensitivityValue.textContent = data.sensitivity + 'x';
           }
           if (typeof data.autoHide === 'boolean') {
             this.autoHide = data.autoHide;
@@ -844,6 +865,7 @@
             favorites: [...this.favorites],
             favoritesOnly: this.favoritesOnly,
             renderScale: this.renderScale,
+            sensitivity: this.sensitivity,
             autoHide: this.autoHide,
             showPresetNames: this.showPresetNames,
             extraPresets: this.extraPresets,
@@ -1381,8 +1403,9 @@
 
       // Initialize visualizer with an audio source node
       initVisualizer(sourceNode) {
+        // Only the visualizer hears this gain, so it sets how strongly the picture reacts
         this.inputGain = this.audioContext.createGain();
-        this.inputGain.gain.value = 1.5;
+        this.inputGain.gain.value = this.sensitivity;
         sourceNode.connect(this.inputGain);
 
         this.createVisualizer();
@@ -1764,6 +1787,13 @@
         this.saveSettings();
       },
 
+      // Applies while the slider is being dragged
+      updateSensitivity() {
+        this.sensitivity = parseFloat(this.sensitivityInput.value);
+        this.sensitivityValue.textContent = this.sensitivity + 'x';
+        if (this.inputGain) this.inputGain.gain.value = this.sensitivity;
+      },
+
       // Update render resolution
       updateRenderScale() {
         const val = this.renderScaleInput.value;
@@ -1846,6 +1876,10 @@
         this.favoritesOnlyInput.addEventListener('change', () => this.updateFavoritesOnly());
         this.extraPresetsInput.addEventListener('change', () => this.updateExtraPresets());
         this.showPresetNamesInput.addEventListener('change', () => this.updateShowPresetNames());
+        this.sensitivityInput.addEventListener('input', () => this.updateSensitivity());
+        this.sensitivityInput.addEventListener('change', () => this.saveSettings());
+        // Release focus after a drag so letter keys work as shortcuts again
+        this.sensitivityInput.addEventListener('pointerup', () => this.sensitivityInput.blur());
         this.renderScaleInput.addEventListener('change', () => this.updateRenderScale());
         this.changeSourceBtn.addEventListener('click', () => this.changeSource());
         this.cancelSourceBtn.addEventListener('click', () => this.cancelChangeSource());
