@@ -441,6 +441,31 @@
       gap: 6px;
     }
 
+    /* File playback: transport buttons and the name of what's playing */
+    .track-row {
+      flex-wrap: nowrap;
+    }
+
+    .track-name,
+    .track-count {
+      white-space: nowrap;
+      /* Stays readable over a bright visualizer at the top of the controls */
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+    }
+
+    .track-name {
+      flex: 1;
+      min-width: 0;
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .track-count {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
     #playPauseBtn .icon-play,
     #playPauseBtn.paused .icon-pause {
       display: none;
@@ -484,6 +509,11 @@
         min-width: 0;
         padding: 14px 0;
         justify-content: center;
+      }
+
+      /* Leave more of the row to the track name */
+      .track-row button {
+        padding: 14px 12px;
       }
     }
 
@@ -542,8 +572,8 @@
         <span class="start-divider">or</span>
         <label class="file-label" id="fileLabel">
           <svg viewBox="0 0 24 24"><path d="M12 3v9.28a4.39 4.39 0 0 0-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>
-          Load Audio File
-          <input type="file" id="audioFileInput" accept="audio/*">
+          Load Audio Files
+          <input type="file" id="audioFileInput" accept="audio/*" multiple>
         </label>
         <button id="cancelSourceBtn" hidden>Cancel</button>
       </div>
@@ -552,6 +582,19 @@
   </div>
 
   <div class="controls" id="controls">
+    <div class="controls-row track-row" id="trackRow" hidden>
+      <button id="prevTrackBtn" title="Previous Track">
+        <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+      </button>
+      <button id="playPauseBtn" title="Play/Pause">
+        <svg viewBox="0 0 24 24"><path class="icon-pause" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/><path class="icon-play" d="M8 5v14l11-7z"/></svg>
+      </button>
+      <button id="nextTrackBtn" title="Next Track">
+        <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+      </button>
+      <span class="track-name" id="trackName"></span>
+      <span class="track-count" id="trackCount"></span>
+    </div>
     <div class="controls-row">
       <select id="presetSelect" aria-label="Preset"></select>
       <button id="favBtn" title="Toggle Favorite" aria-pressed="false">
@@ -559,9 +602,6 @@
       </button>
     </div>
     <div class="controls-row button-row">
-      <button id="playPauseBtn" title="Play/Pause" hidden>
-        <svg viewBox="0 0 24 24"><path class="icon-pause" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/><path class="icon-play" d="M8 5v14l11-7z"/></svg>
-      </button>
       <button id="prevBtn" title="Previous Preset">
         <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
       </button>
@@ -667,7 +707,12 @@
       errorMsg: document.getElementById('errorMsg'),
       controls: document.getElementById('controls'),
       presetSelect: document.getElementById('presetSelect'),
+      trackRow: document.getElementById('trackRow'),
+      prevTrackBtn: document.getElementById('prevTrackBtn'),
       playPauseBtn: document.getElementById('playPauseBtn'),
+      nextTrackBtn: document.getElementById('nextTrackBtn'),
+      trackName: document.getElementById('trackName'),
+      trackCount: document.getElementById('trackCount'),
       prevBtn: document.getElementById('prevBtn'),
       nextBtn: document.getElementById('nextBtn'),
       randomBtn: document.getElementById('randomBtn'),
@@ -705,6 +750,8 @@
       audioSource: null,
       audioEl: null,
       audioUrl: null,
+      tracks: [],
+      trackIndex: 0,
       autoplayBlocked: false,
       micNeedsReconnect: false,
       reconnectingMic: false,
@@ -1160,7 +1207,9 @@
         this.contextLost = false;
         this.micNeedsReconnect = false;
         this.autoplayBlocked = false;
-        this.playPauseBtn.hidden = true;
+        this.trackRow.hidden = true;
+        this.tracks = [];
+        this.setMediaSessionHandlers(false);
         // No session left to go back to
         this.startOverlay.classList.remove('switching');
         this.cancelSourceBtn.hidden = true;
@@ -1372,8 +1421,8 @@
         }
       },
 
-      // Start with audio file (streamed through an <audio> element, not decoded into memory)
-      async startFile(file) {
+      // Start with audio files (streamed through an <audio> element, not decoded into memory)
+      async startFile(files) {
         this.cleanup();
         this.hideError();
         let audioEl = null;
@@ -1385,15 +1434,14 @@
 
           audioEl = new Audio();
           this.audioEl = audioEl;
-          this.audioUrl = URL.createObjectURL(file);
-          audioEl.src = this.audioUrl;
-          audioEl.loop = true;
+          this.tracks = files;
           audioEl.addEventListener('play', () => this.updatePlayPauseBtn());
           audioEl.addEventListener('pause', () => this.updatePlayPauseBtn());
+          audioEl.addEventListener('ended', () => {
+            if (this.audioEl === audioEl) this.stepTrack(1);
+          });
           audioEl.addEventListener('error', () => {
-            if (this.audioEl === audioEl) {
-              this.returnToStart('Could not load audio file. Unsupported format.');
-            }
+            if (this.audioEl === audioEl) this.onTrackError();
           });
 
           const source = audioContext.createMediaElementSource(audioEl);
@@ -1401,16 +1449,8 @@
           source.connect(audioContext.destination);
           this.audioSource = source;
           this.initVisualizer(source);
-          this.playPauseBtn.hidden = false;
-
-          try {
-            await audioEl.play();
-          } catch (err) {
-            // No user activation left after the file picker: wait for a tap on play / canvas
-            if (err.name !== 'NotAllowedError') throw err;
-            if (this.audioEl === audioEl) this.autoplayBlocked = true;
-          }
-          this.updatePlayPauseBtn();
+          this.trackRow.hidden = false;
+          await this.playTrack(0);
 
         } catch (err) {
           // Already torn down (error event fired, or a newer session started)
@@ -1420,6 +1460,90 @@
             ? err.message
             : 'Could not load audio file. ' + (err.message || 'Unsupported format.'));
         }
+      },
+
+      // Point the player at one of the picked files and start it
+      async playTrack(index) {
+        const audioEl = this.audioEl;
+        const count = this.tracks.length;
+        const oldUrl = this.audioUrl;
+        this.trackIndex = (index + count) % count;
+        this.audioUrl = URL.createObjectURL(this.tracks[this.trackIndex]);
+        audioEl.src = this.audioUrl;
+        if (oldUrl) URL.revokeObjectURL(oldUrl);
+        // A single file repeats. With several, the ended handler moves on to the next.
+        audioEl.loop = count === 1;
+        this.autoplayBlocked = false;
+        this.updateTrackInfo();
+
+        try {
+          await audioEl.play();
+        } catch (err) {
+          // No user activation left after the file picker: wait for a tap on play / canvas.
+          // Other failures need nothing here: a skip that interrupted loading has its own
+          // playTrack call, and a file that can't be played fires the error event.
+          if (err.name === 'NotAllowedError' && this.audioEl === audioEl) {
+            this.autoplayBlocked = true;
+          }
+        }
+        this.updatePlayPauseBtn();
+      },
+
+      // Move through the picked files by delta (+1 next, -1 previous), wrapping around
+      stepTrack(delta) {
+        if (!this.audioEl || this.tracks.length < 2) return;
+        this.playTrack(this.trackIndex + delta);
+      },
+
+      // Like most players: back to the start of this file first, then to the previous file
+      prevTrack() {
+        if (!this.audioEl) return;
+        if (this.audioEl.currentTime > 3 || this.tracks.length < 2) {
+          this.audioEl.currentTime = 0;
+        } else {
+          this.stepTrack(-1);
+        }
+      },
+
+      // A file that can't be played is dropped from the list. With none left, it's an error.
+      onTrackError() {
+        this.tracks = this.tracks.filter((_, i) => i !== this.trackIndex);
+        if (this.tracks.length === 0) {
+          this.returnToStart('Could not load audio file. Unsupported format.');
+        } else {
+          this.playTrack(this.trackIndex);
+        }
+      },
+
+      // Show what's playing, in the controls and on the lock screen
+      updateTrackInfo() {
+        const count = this.tracks.length;
+        const title = this.tracks[this.trackIndex].name.replace(/\.[^.]+$/, '');
+        this.trackName.textContent = title;
+        this.trackCount.textContent = count > 1 ? `${this.trackIndex + 1}/${count}` : '';
+        this.prevTrackBtn.hidden = count < 2;
+        this.nextTrackBtn.hidden = count < 2;
+        if (navigator.mediaSession && window.MediaMetadata) {
+          navigator.mediaSession.metadata = new MediaMetadata({ title });
+        }
+        this.setMediaSessionHandlers(true);
+      },
+
+      // Lock screen, headphone and keyboard media buttons for file playback
+      setMediaSessionHandlers(on) {
+        if (!navigator.mediaSession) return;
+        const several = on && this.tracks.length > 1;
+        const handlers = {
+          play: on ? () => { if (this.audioEl && this.audioEl.paused) this.togglePlayback(); } : null,
+          pause: on ? () => { if (this.audioEl && !this.audioEl.paused) this.togglePlayback(); } : null,
+          previoustrack: several ? () => this.prevTrack() : null,
+          nexttrack: several ? () => this.stepTrack(1) : null
+        };
+        for (const [action, handler] of Object.entries(handlers)) {
+          // Older browsers throw on actions they don't know
+          try { navigator.mediaSession.setActionHandler(action, handler); } catch {}
+        }
+        if (!on) navigator.mediaSession.metadata = null;
       },
 
       togglePlayback() {
@@ -1600,6 +1724,8 @@
           case 's': this.toggleSettings(); break;
           case 'd': this.toggleFavorite(); break;
           case 'p': this.togglePlayback(); break;
+          case 'n': this.stepTrack(1); break;
+          case 'b': this.prevTrack(); break;
           case 'ArrowRight': this.nextPreset(); break;
           case 'ArrowLeft': this.prevPreset(); break;
         }
@@ -1610,10 +1736,11 @@
         this.startBtn.addEventListener('click', () => this.startMic());
 
         this.audioFileInput.addEventListener('change', (e) => {
-          const file = e.target.files[0];
-          // Reset so picking the same file again still fires change
+          // Copy the list first: resetting the input empties it. The reset is so picking
+          // the same files again still fires change.
+          const files = [...e.target.files];
           e.target.value = '';
-          if (file) this.startFile(file);
+          if (files.length) this.startFile(files);
         });
 
         this.presetSelect.addEventListener('change', () => {
@@ -1623,6 +1750,8 @@
           this.presetSelect.blur();
         });
         this.playPauseBtn.addEventListener('click', () => this.togglePlayback());
+        this.prevTrackBtn.addEventListener('click', () => this.prevTrack());
+        this.nextTrackBtn.addEventListener('click', () => this.stepTrack(1));
         this.prevBtn.addEventListener('click', () => this.prevPreset());
         this.nextBtn.addEventListener('click', () => this.nextPreset());
         this.randomBtn.addEventListener('click', () => this.randomPreset());

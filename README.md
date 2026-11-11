@@ -11,7 +11,7 @@ The [official butterchurnviz.com](https://butterchurnviz.com) uses the deprecate
 ## How to use
 
 1. Open the demo in Safari (or any modern browser).
-2. Tap **Enable Microphone** to visualize whatever is playing around you, or **Load Audio File** to play a song from your device.
+2. Tap **Enable Microphone** to visualize whatever is playing around you, or **Load Audio Files** to play one or more songs from your device.
 3. The controls hide after a few seconds. Tap the screen (or move the mouse) to bring them back, and swipe left or right to change preset. To keep the controls on screen, tap the eye button; tap it again to let them hide.
 4. To switch between the microphone and a file, or play a different song, open **Settings → Change Audio Source**. What's playing keeps going until you pick the new source.
 
@@ -21,7 +21,7 @@ Needs iOS 15 or later on iPhone and iPad, or any browser with WebGL 2.
 
 ## Features
 
-- Live microphone input, or audio file playback with play/pause, switchable at any time
+- Live microphone input, or playback of one or more audio files with play/pause and next/previous, switchable at any time
 - 100 Milkdrop presets with previous/next, random, and auto-cycle
 - Favorites, with an option to cycle through favorites only
 - Adjustable cycle interval and render resolution (lower it if a preset stutters)
@@ -40,6 +40,7 @@ Needs iOS 15 or later on iPhone and iPad, or any browser with WebGL 2.
 | C | Toggle auto-cycle |
 | D | Toggle favorite |
 | P | Play / pause (audio file mode) |
+| N / B | Next / previous audio file |
 | F | Fullscreen |
 | H | Auto-hide controls on / off |
 | S | Settings |
