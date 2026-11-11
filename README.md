@@ -27,6 +27,7 @@ Needs iOS 15 or later on iPhone and iPad, or any browser with WebGL 2.
 - Adjustable cycle interval and render resolution (lower it if a preset stutters)
 - Controls that hide on request, with tap-to-reveal
 - Settings and favorites are remembered between visits
+- Keeps the screen awake while it runs, and plays audio files even with the ring switch on silent (iOS 16.4+)
 - Installable as an app and works offline
 
 ## Keyboard shortcuts
