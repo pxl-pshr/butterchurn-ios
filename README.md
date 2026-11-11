@@ -24,7 +24,7 @@ Needs iOS 15 or later on iPhone and iPad, or any browser with WebGL 2.
 - Live microphone input, or playback of one or more audio files with play/pause and next/previous, switchable at any time
 - 100 Milkdrop presets built in and 295 more to switch on in Settings, with previous/next, random, and auto-cycle
 - Favorites, with an option to cycle through favorites only
-- Adjustable cycle interval and render resolution (lower it if a preset stutters)
+- Adjustable cycle interval, sensitivity to sound, and render resolution (lower it if a preset stutters)
 - Controls that hide themselves and come back on a tap, or stay on screen if you prefer
 - Swipe left or right to change preset, with the preset name shown briefly
 - Settings, favorites, the last preset, and auto-cycle are remembered between visits
