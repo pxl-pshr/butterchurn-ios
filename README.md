@@ -22,7 +22,7 @@ Needs iOS 15 or later on iPhone and iPad, or any browser with WebGL 2.
 ## Features
 
 - Live microphone input, or playback of one or more audio files with play/pause and next/previous, switchable at any time
-- 100 Milkdrop presets with previous/next, random, and auto-cycle
+- 100 Milkdrop presets built in and 295 more to switch on in Settings, with previous/next, random, and auto-cycle
 - Favorites, with an option to cycle through favorites only
 - Adjustable cycle interval and render resolution (lower it if a preset stutters)
 - Controls that hide themselves and come back on a tap, or stay on screen if you prefer
@@ -57,6 +57,8 @@ python3 -m http.server
 Microphone access needs HTTPS or `localhost`. Butterchurn, the presets, and the font are bundled in `vendor/`, so there are no external requests.
 
 The service worker loads pages network-first, so deploys reach users on their next visit. If the network hasn't answered within 3 seconds, it serves the cached copy instead. If you add files that should work offline, add them to `PRECACHE_URLS` in `sw.js` and bump `CACHE_NAME`.
+
+The extra preset packs in `vendor/` (`Extra`, `Extra2`, `MD1`) are deliberately not precached. They're downloaded when someone switches on **More presets**, and the service worker keeps them from then on.
 
 The vendored scripts have their version in the file name (e.g. `butterchurn-2.6.7.min.js`) because the service worker serves them from cache. To upgrade one, add the new file under a new name, update its `<script>` tag and `PRECACHE_URLS`, and bump `CACHE_NAME`. Don't overwrite a vendored file in place, or the first launch after the deploy will pair the new page with the old cached script.
 
