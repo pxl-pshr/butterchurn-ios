@@ -657,6 +657,7 @@
       reconnectingMic: false,
       contextLost: false,
       canvasUsed: false,
+      wakeLock: null,
       settingsOpen: false,
       cycleDuration: 15,
       renderScale: 'auto',
@@ -980,6 +981,40 @@
         }
       },
 
+      // iOS mutes Web Audio while the ring switch is on silent unless the page says it plays
+      // media ('playback'). 'auto' lets the browser choose, which the microphone needs.
+      setAudioSessionType(type) {
+        if (!navigator.audioSession) return;
+        try { navigator.audioSession.type = type; } catch {}
+      },
+
+      // Keep the screen from dimming and locking while the visualizer runs (iOS 16.4+).
+      // The browser drops the lock whenever the page is hidden, so it's asked for again on return.
+      async requestWakeLock() {
+        if (!navigator.wakeLock || this.wakeLock || !this.visualizer) return;
+        if (document.visibilityState !== 'visible') return;
+        try {
+          const lock = await navigator.wakeLock.request('screen');
+          // The session ended, or another request got there first, while this one was pending
+          if (this.wakeLock || !this.visualizer) {
+            lock.release().catch(() => {});
+            return;
+          }
+          this.wakeLock = lock;
+          lock.addEventListener('release', () => {
+            if (this.wakeLock === lock) this.wakeLock = null;
+          });
+        } catch {
+          // Refused (for example in Low Power Mode): the screen follows the normal auto-lock
+        }
+      },
+
+      releaseWakeLock() {
+        if (!this.wakeLock) return;
+        this.wakeLock.release().catch(() => {});
+        this.wakeLock = null;
+      },
+
       stopMicStream() {
         if (this.mediaStream) {
           this.mediaStream.getTracks().forEach(track => track.stop());
@@ -1032,6 +1067,8 @@
 
         this.visualizer = null;
         if (this.canvasUsed) this.resetCanvas();
+        this.releaseWakeLock();
+        this.setAudioSessionType('auto');
         this.contextLost = false;
         this.micNeedsReconnect = false;
         this.autoplayBlocked = false;
@@ -1150,6 +1187,7 @@
         this.startOverlay.classList.add('hidden');
         this.updateInert();
         this.render();
+        this.requestWakeLock();
       },
 
       attachMicStream(stream) {
@@ -1252,6 +1290,7 @@
         let audioEl = null;
 
         try {
+          this.setAudioSessionType('playback');
           const audioContext = this.createAudioContext();
           this.resumeAudio();
 
@@ -1479,6 +1518,7 @@
         document.addEventListener('visibilitychange', () => {
           if (document.visibilityState !== 'visible') return;
           this.resumeAudio();
+          this.requestWakeLock();
           if (this.micNeedsReconnect) this.reconnectMic();
         });
 
