@@ -27,7 +27,7 @@ Needs iOS 15 or later on iPhone and iPad, or any browser with WebGL 2.
 - Adjustable cycle interval and render resolution (lower it if a preset stutters)
 - Controls that hide themselves and come back on a tap, or stay on screen if you prefer
 - Swipe left or right to change preset, with the preset name shown briefly
-- Settings and favorites are remembered between visits
+- Settings, favorites, the last preset, and auto-cycle are remembered between visits
 - Keeps the screen awake while it runs, and plays audio files even with the ring switch on silent (iOS 16.4+)
 - Installable as an app and works offline
 

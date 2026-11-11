@@ -745,6 +745,13 @@
             this.showPresetNames = false;
             this.showPresetNamesInput.checked = false;
           }
+          // Pick up where the last visit left off
+          if (typeof data.lastPreset === 'string') {
+            this.currentPreset = data.lastPreset;
+          }
+          if (data.cycling) {
+            this.isCycling = true;
+          }
         } catch {}
       },
 
@@ -757,7 +764,9 @@
             favoritesOnly: this.favoritesOnly,
             renderScale: this.renderScale,
             autoHide: this.autoHide,
-            showPresetNames: this.showPresetNames
+            showPresetNames: this.showPresetNames,
+            lastPreset: this.currentPreset,
+            cycling: this.isCycling
           }));
         } catch {}
       },
@@ -834,7 +843,10 @@
         this.currentPreset = name;
         this.presetSelect.value = name;
         this.updateFavBtn();
-        if (changed) this.showPresetName(name);
+        if (changed) {
+          this.showPresetName(name);
+          this.saveSettings();
+        }
         // Any change restarts the cycle countdown, so a preset picked by hand gets its full time
         if (this.cycleInterval) this.startCycleInterval();
       },
@@ -879,11 +891,16 @@
         }, ms);
       },
 
+      updateCycleBtn() {
+        this.cycleBtn.classList.toggle('active', this.isCycling);
+        this.cycleBtn.setAttribute('aria-pressed', this.isCycling);
+      },
+
       // Toggle cycling
       toggleCycle() {
         this.isCycling = !this.isCycling;
-        this.cycleBtn.classList.toggle('active', this.isCycling);
-        this.cycleBtn.setAttribute('aria-pressed', this.isCycling);
+        this.updateCycleBtn();
+        this.saveSettings();
 
         if (this.isCycling) {
           this.startCycleInterval();
@@ -1246,8 +1263,9 @@
           this.updatePresetDropdown();
         }
         this.createVisualizer();
-        // Keep the preset and cycling across a change of audio source
-        if (this.currentPreset) {
+        // Keep the preset and cycling across a change of audio source, and from the last
+        // visit. A first visit, or a remembered preset that no longer exists, gets a random one.
+        if (this.presets[this.currentPreset]) {
           this.loadPreset(this.currentPreset, 0);
         } else {
           this.randomPreset();
@@ -1657,6 +1675,7 @@
         this.bindEvents();
         this.updateInert();
         this.updateHideBtn();
+        this.updateCycleBtn();
         this.fullscreenBtn.hidden = !this.isFullscreenSupported();
 
         if (!butterchurn || !butterchurnPresets) {
