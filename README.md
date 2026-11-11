@@ -12,7 +12,7 @@ The [official butterchurnviz.com](https://butterchurnviz.com) uses the deprecate
 
 1. Open the demo in Safari (or any modern browser).
 2. Tap **Enable Microphone** to visualize whatever is playing around you, or **Load Audio File** to play a song from your device.
-3. Tap the eye button to hide the controls. Tap the screen to bring them back for a few seconds, and tap the eye again to keep them up.
+3. The controls hide after a few seconds. Tap the screen (or move the mouse) to bring them back, and swipe left or right to change preset. To keep the controls on screen, tap the eye button; tap it again to let them hide.
 4. To switch between the microphone and a file, or play a different song, open **Settings → Change Audio Source**. What's playing keeps going until you pick the new source.
 
 Needs iOS 15 or later on iPhone and iPad, or any browser with WebGL 2.
@@ -25,7 +25,8 @@ Needs iOS 15 or later on iPhone and iPad, or any browser with WebGL 2.
 - 100 Milkdrop presets with previous/next, random, and auto-cycle
 - Favorites, with an option to cycle through favorites only
 - Adjustable cycle interval and render resolution (lower it if a preset stutters)
-- Controls that hide on request, with tap-to-reveal
+- Controls that hide themselves and come back on a tap, or stay on screen if you prefer
+- Swipe left or right to change preset, with the preset name shown briefly
 - Settings and favorites are remembered between visits
 - Keeps the screen awake while it runs, and plays audio files even with the ring switch on silent (iOS 16.4+)
 - Installable as an app and works offline
@@ -40,9 +41,9 @@ Needs iOS 15 or later on iPhone and iPad, or any browser with WebGL 2.
 | D | Toggle favorite |
 | P | Play / pause (audio file mode) |
 | F | Fullscreen |
-| H | Hide / show controls |
+| H | Auto-hide controls on / off |
 | S | Settings |
-| Esc | Close settings / show controls / cancel changing the audio source |
+| Esc | Close settings / keep controls on screen / cancel changing the audio source |
 
 ## Development
 
