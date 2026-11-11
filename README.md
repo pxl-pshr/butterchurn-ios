@@ -12,8 +12,8 @@ The [official butterchurnviz.com](https://butterchurnviz.com) uses the deprecate
 
 1. Open the demo in Safari (or any modern browser).
 2. Tap **Enable Microphone** to visualize whatever is playing around you, or **Load Audio File** to play a song from your device.
-3. Tap the canvas to bring the controls back after hiding them.
-4. To switch between the microphone and a file, or play a different song, open **Settings → Change audio source**.
+3. Tap the eye button to hide the controls. Tap the screen to bring them back for a few seconds, and tap the eye again to keep them up.
+4. To switch between the microphone and a file, or play a different song, open **Settings → Change Audio Source**. What's playing keeps going until you pick the new source.
 
 Needs iOS 15 or later on iPhone and iPad, or any browser with WebGL 2.
 
@@ -25,7 +25,7 @@ Needs iOS 15 or later on iPhone and iPad, or any browser with WebGL 2.
 - 100 Milkdrop presets with previous/next, random, and auto-cycle
 - Favorites, with an option to cycle through favorites only
 - Adjustable cycle interval and render resolution (lower it if a preset stutters)
-- Auto-hiding controls with tap-to-reveal
+- Controls that hide on request, with tap-to-reveal
 - Settings and favorites are remembered between visits
 - Installable as an app and works offline
 
@@ -41,7 +41,7 @@ Needs iOS 15 or later on iPhone and iPad, or any browser with WebGL 2.
 | F | Fullscreen |
 | H | Hide / show controls |
 | S | Settings |
-| Esc | Close settings / show controls |
+| Esc | Close settings / show controls / cancel changing the audio source |
 
 ## Development
 
@@ -53,7 +53,7 @@ python3 -m http.server
 
 Microphone access needs HTTPS or `localhost`. Butterchurn, the presets, and the font are bundled in `vendor/`, so there are no external requests.
 
-The service worker loads pages network-first, so deploys reach users on their next visit. If you add files that should work offline, add them to `PRECACHE_URLS` in `sw.js` and bump `CACHE_NAME`.
+The service worker loads pages network-first, so deploys reach users on their next visit. If the network hasn't answered within 3 seconds, it serves the cached copy instead. If you add files that should work offline, add them to `PRECACHE_URLS` in `sw.js` and bump `CACHE_NAME`.
 
 The vendored scripts have their version in the file name (e.g. `butterchurn-2.6.7.min.js`) because the service worker serves them from cache. To upgrade one, add the new file under a new name, update its `<script>` tag and `PRECACHE_URLS`, and bump `CACHE_NAME`. Don't overwrite a vendored file in place, or the first launch after the deploy will pair the new page with the old cached script.
 

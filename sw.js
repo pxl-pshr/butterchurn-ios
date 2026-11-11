@@ -13,6 +13,8 @@ const PRECACHE_URLS = [
   './vendor/jetbrains-mono-latin-400-normal.woff2',
   './vendor/jetbrains-mono-latin-700-normal.woff2'
 ];
+// How long a page load waits for the network before falling back to the cached copy
+const NAVIGATION_TIMEOUT_MS = 3000;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -39,6 +41,10 @@ function putInCache(request, response) {
     .catch(() => {});
 }
 
+function cachedPage(request) {
+  return caches.match(request).then((cached) => cached || caches.match('./index.html'));
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
@@ -51,11 +57,14 @@ self.addEventListener('fetch', (event) => {
   event.waitUntil(network.then((response) => putInCache(request, response)).catch(() => {}));
 
   if (request.mode === 'navigate') {
-    // Pages: network first so new deploys reach users, cache when offline
+    // Pages: network first so new deploys reach users. Fall back to the cached copy when
+    // offline or when the connection stalls; the late response still refreshes the cache.
+    const timeout = new Promise((resolve) => setTimeout(resolve, NAVIGATION_TIMEOUT_MS));
     event.respondWith(
-      network.catch(() =>
-        caches.match(request).then((cached) => cached || caches.match('./index.html'))
-      )
+      Promise.race([network.catch(() => undefined), timeout])
+        .then((response) => response || cachedPage(request))
+        // Nothing cached either: the network is the only option, however slow
+        .then((response) => response || network)
     );
     return;
   }

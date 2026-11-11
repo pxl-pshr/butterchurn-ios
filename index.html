@@ -8,6 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#0a0a0c">
   <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="preload" href="vendor/jetbrains-mono-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   <title>Butterchurn Visualizer</title>
@@ -39,7 +40,7 @@
       --surface: rgba(255, 255, 255, 0.05);
       --surface-hover: rgba(255, 255, 255, 0.1);
       --text: #e0e0e0;
-      --text-dim: #666;
+      --text-dim: #8a8a8a;
       --accent: #00ff88;
       --accent-dim: rgba(0, 255, 136, 0.2);
       /* Keep UI clear of the notch and home indicator (needs viewport-fit=cover) */
@@ -111,9 +112,12 @@
       white-space: nowrap;
     }
 
-    button:hover {
-      background: var(--surface-hover);
-      border-color: var(--accent-dim);
+    /* Hover styles only where there's a pointer that hovers: on touch screens they stick after a tap */
+    @media (hover: hover) {
+      button:hover {
+        background: var(--surface-hover);
+        border-color: var(--accent-dim);
+      }
     }
 
     button:active {
@@ -145,7 +149,7 @@
       cursor: pointer;
       -webkit-appearance: none;
       appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23666'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238a8a8a'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: right 12px center;
       padding-right: 36px;
@@ -162,16 +166,30 @@
       background: var(--bg);
       z-index: 100;
       display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 24px;
+      overflow-y: auto;
       padding: calc(40px + var(--safe-top)) calc(40px + var(--safe-right)) calc(40px + var(--safe-bottom)) calc(40px + var(--safe-left));
       text-align: center;
     }
 
     .start-overlay.hidden {
       display: none;
+    }
+
+    /* Over a running session (Change Audio Source): let it show through */
+    .start-overlay.switching {
+      background: rgba(10, 10, 12, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    /* Auto margins center the content when it fits; when it doesn't (a phone in
+       landscape) it starts at the top and the overlay scrolls instead of clipping it */
+    .start-content {
+      margin: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
     }
 
     .start-overlay h1 {
@@ -198,8 +216,10 @@
       font-weight: 700;
     }
 
-    .start-btn:hover {
-      background: #00ffaa;
+    @media (hover: hover) {
+      .start-btn:hover {
+        background: #00ffaa;
+      }
     }
 
     button:disabled,
@@ -230,9 +250,11 @@
       position: relative;
     }
 
-    .file-label:hover {
-      background: var(--surface-hover);
-      border-color: var(--accent-dim);
+    @media (hover: hover) {
+      .file-label:hover {
+        background: var(--surface-hover);
+        border-color: var(--accent-dim);
+      }
     }
 
     .file-label:has(input:focus-visible) {
@@ -284,6 +306,9 @@
       -webkit-backdrop-filter: blur(12px);
       border-top: 1px solid var(--surface-hover);
       padding: 20px calc(20px + var(--safe-right)) calc(20px + var(--safe-bottom)) calc(20px + var(--safe-left));
+      max-height: 100vh;
+      max-height: 100dvh;
+      overflow-y: auto;
       z-index: 15;
       transform: translateY(100%);
       transition: transform 0.3s;
@@ -407,6 +432,57 @@
       button .label {
         display: none;
       }
+
+      /* Icon-only buttons share the row, so none wraps onto a line of its own */
+      .button-row {
+        gap: 6px;
+        flex-wrap: nowrap;
+      }
+
+      .button-row button {
+        flex: 1 1 0;
+        min-width: 0;
+        padding: 14px 0;
+        justify-content: center;
+      }
+    }
+
+    /* Short screens (a phone in landscape): tighten the start screen so it fits */
+    @media (max-height: 480px) {
+      .start-overlay {
+        padding: calc(16px + var(--safe-top)) calc(24px + var(--safe-right)) calc(16px + var(--safe-bottom)) calc(24px + var(--safe-left));
+      }
+
+      .start-content {
+        gap: 14px;
+      }
+
+      .start-overlay h1 {
+        font-size: 28px;
+      }
+
+      .start-overlay p {
+        max-width: 560px;
+      }
+
+      .start-actions {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+    }
+
+    /* Narrow phones: make room for the start button so it stays centered */
+    @media (max-width: 360px) {
+      .start-overlay {
+        padding-left: calc(20px + var(--safe-left));
+        padding-right: calc(20px + var(--safe-right));
+      }
+
+      .start-btn {
+        padding: 16px 28px;
+        white-space: normal;
+      }
     }
   </style>
 </head>
@@ -414,31 +490,34 @@
   <canvas id="canvas"></canvas>
 
   <div class="start-overlay" id="startOverlay">
-    <h1>Butterchurn</h1>
-    <p>WebGL music visualizer powered by Milkdrop. Enable your microphone or load an audio file to start visualizing.</p>
-    <div class="start-actions">
-      <button class="start-btn" id="startBtn">
-        <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
-        Enable Microphone
-      </button>
-      <span class="start-divider">or</span>
-      <label class="file-label" id="fileLabel">
-        <svg viewBox="0 0 24 24"><path d="M12 3v9.28a4.39 4.39 0 0 0-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>
-        Load Audio File
-        <input type="file" id="audioFileInput" accept="audio/*">
-      </label>
+    <div class="start-content">
+      <h1>Butterchurn</h1>
+      <p>WebGL music visualizer powered by Milkdrop. Enable your microphone or load an audio file to start visualizing.</p>
+      <div class="start-actions">
+        <button class="start-btn" id="startBtn">
+          <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+          Enable Microphone
+        </button>
+        <span class="start-divider">or</span>
+        <label class="file-label" id="fileLabel">
+          <svg viewBox="0 0 24 24"><path d="M12 3v9.28a4.39 4.39 0 0 0-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>
+          Load Audio File
+          <input type="file" id="audioFileInput" accept="audio/*">
+        </label>
+        <button id="cancelSourceBtn" hidden>Cancel</button>
+      </div>
+      <div class="error-msg" id="errorMsg"></div>
     </div>
-    <div class="error-msg" id="errorMsg"></div>
   </div>
 
   <div class="controls" id="controls">
     <div class="controls-row">
-      <select id="presetSelect"></select>
-      <button id="favBtn" title="Toggle Favorite">
+      <select id="presetSelect" aria-label="Preset"></select>
+      <button id="favBtn" title="Toggle Favorite" aria-pressed="false">
         <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
       </button>
     </div>
-    <div class="controls-row">
+    <div class="controls-row button-row">
       <button id="playPauseBtn" title="Play/Pause" hidden>
         <svg viewBox="0 0 24 24"><path class="icon-pause" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/><path class="icon-play" d="M8 5v14l11-7z"/></svg>
       </button>
@@ -452,7 +531,7 @@
         <svg viewBox="0 0 24 24"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
         <span class="label">Random</span>
       </button>
-      <button id="cycleBtn" title="Auto-cycle Presets">
+      <button id="cycleBtn" title="Auto-cycle Presets" aria-pressed="false">
         <svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
         <span class="label">Cycle</span>
       </button>
@@ -460,11 +539,11 @@
         <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
         <span class="label">Fullscreen</span>
       </button>
-      <button id="settingsBtn" title="Settings">
+      <button id="settingsBtn" title="Settings" aria-expanded="false" aria-controls="settingsPanel">
         <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg>
         <span class="label">Settings</span>
       </button>
-      <button id="hideBtn" title="Hide Controls">
+      <button id="hideBtn" title="Hide Controls" aria-pressed="false">
         <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
         <span class="label">Hide</span>
       </button>
@@ -495,7 +574,7 @@
       </select>
     </div>
     <div class="setting-row" style="margin-top: 12px;">
-      <button id="changeSourceBtn">Change audio source</button>
+      <button id="changeSourceBtn">Change Audio Source</button>
     </div>
     <div style="margin-top: 16px; text-align: center;">
       <a class="github-link" href="https://github.com/pxl-pshr/butterchurn-ios" target="_blank" rel="noopener">
@@ -520,8 +599,16 @@
       }
     };
     const RENDER_SCALES = ['auto', '1', '1.5', '2'];
+    // Auto render resolution stays under about this many pixels (a bit more than a 1080p frame)
+    const AUTO_MAX_PIXELS = 2.25e6;
     const CONTROLS_AUTO_HIDE_MS = 4000;
     const GRAPHICS_ERROR_MSG = 'Could not start the graphics. This browser or device may not support WebGL 2.';
+
+    // True when the focused element needs the keys itself (typing a number, jumping through a list)
+    function consumesKeys(el) {
+      const tag = el.tagName;
+      return tag === 'SELECT' || tag === 'TEXTAREA' || (tag === 'INPUT' && el.type !== 'checkbox');
+    }
 
     const app = {
       // DOM
@@ -539,7 +626,7 @@
       fullscreenBtn: document.getElementById('fullscreenBtn'),
       hideBtn: document.getElementById('hideBtn'),
       audioFileInput: document.getElementById('audioFileInput'),
-      fileLabel: document.getElementById('fileLabel'),
+      cancelSourceBtn: document.getElementById('cancelSourceBtn'),
       settingsBtn: document.getElementById('settingsBtn'),
       settingsPanel: document.getElementById('settingsPanel'),
       settingsClose: document.getElementById('settingsClose'),
@@ -635,7 +722,9 @@
 
       // Update the favorite button state
       updateFavBtn() {
-        this.favBtn.classList.toggle('active', this.favorites.has(this.currentPreset));
+        const isFav = this.favorites.has(this.currentPreset);
+        this.favBtn.classList.toggle('active', isFav);
+        this.favBtn.setAttribute('aria-pressed', isFav);
       },
 
       // Update preset dropdown to show stars on favorites
@@ -680,6 +769,8 @@
         this.currentPreset = name;
         this.presetSelect.value = name;
         this.updateFavBtn();
+        // Any change restarts the cycle countdown, so a preset picked by hand gets its full time
+        if (this.cycleInterval) this.startCycleInterval();
       },
 
       // Random preset (never repeats the current one when there's a choice)
@@ -726,6 +817,7 @@
       toggleCycle() {
         this.isCycling = !this.isCycling;
         this.cycleBtn.classList.toggle('active', this.isCycling);
+        this.cycleBtn.setAttribute('aria-pressed', this.isCycling);
 
         if (this.isCycling) {
           this.startCycleInterval();
@@ -738,9 +830,15 @@
       // Pixel ratio to render at, per the render resolution setting
       getPixelRatio() {
         const dpr = window.devicePixelRatio || 1;
-        // Auto: on phone screens denser than 2x, 1.5x looks nearly as sharp and draws ~44% fewer pixels
-        if (this.renderScale === 'auto') return dpr > 2 ? 1.5 : dpr;
-        return Math.min(parseFloat(this.renderScale), Math.max(dpr, 1));
+        if (this.renderScale !== 'auto') {
+          return Math.min(parseFloat(this.renderScale), Math.max(dpr, 1));
+        }
+        // Auto: on phone screens denser than 2x, 1.5x looks nearly as sharp and draws ~44% fewer
+        // pixels. Bigger screens are held to a pixel budget (never below 1x), so a tablet or
+        // laptop doesn't render several times what a phone does.
+        const density = dpr > 2 ? 1.5 : dpr;
+        const budget = Math.sqrt(AUTO_MAX_PIXELS / (window.innerWidth * window.innerHeight));
+        return Math.min(density, Math.max(budget, 1));
       },
 
       // Resize handler
@@ -812,18 +910,34 @@
         this.controlsHidden = hidden;
         this.controls.classList.toggle('hidden', hidden);
         this.updateInert();
+        this.updateHideBtn();
       },
 
-      // Keep keyboard focus out of UI that's hidden or covered by the start screen
+      // Hide mode: the controls are hidden, or up for a few seconds after a tap
+      isHideMode() {
+        return this.controlsHidden || this.controlsTimeout !== null;
+      },
+
+      updateHideBtn() {
+        const on = this.isHideMode();
+        this.hideBtn.classList.toggle('active', on);
+        this.hideBtn.setAttribute('aria-pressed', on);
+      },
+
+      isStartScreenOpen() {
+        return !this.startOverlay.classList.contains('hidden');
+      },
+
+      // Keep keyboard focus out of UI that's hidden or covered by the start screen or settings
       updateInert() {
-        const onStart = !this.startOverlay.classList.contains('hidden');
-        this.controls.inert = onStart || this.controlsHidden;
+        this.controls.inert = this.isStartScreenOpen() || this.controlsHidden || this.settingsOpen;
         this.settingsPanel.inert = !this.settingsOpen;
       },
 
-      // Toggle controls visibility
+      // Hide button / H: switch hide mode on or off. Turning it off while the controls
+      // are up after a tap keeps them up.
       toggleControls() {
-        this.setControlsHidden(!this.controlsHidden);
+        this.setControlsHidden(!this.isHideMode());
       },
 
       // Show controls temporarily (auto-hide after delay)
@@ -844,6 +958,7 @@
           }
           this.setControlsHidden(true);
         }, CONTROLS_AUTO_HIDE_MS);
+        this.updateHideBtn();
       },
 
       // Create the AudioContext and track it immediately so cleanup() can always close it
@@ -917,25 +1032,41 @@
 
         this.visualizer = null;
         if (this.canvasUsed) this.resetCanvas();
-        this.isCycling = false;
-        this.cycleBtn.classList.remove('active');
         this.contextLost = false;
         this.micNeedsReconnect = false;
         this.autoplayBlocked = false;
         this.playPauseBtn.hidden = true;
+        // No session left to go back to
+        this.startOverlay.classList.remove('switching');
+        this.cancelSourceBtn.hidden = true;
       },
 
-      // Tear down and go back to the start screen, optionally with an error message
+      // Tear down and go back to the start screen with an error message
       returnToStart(msg) {
         this.cleanup();
         if (this.settingsOpen) this.toggleSettings();
         this.startOverlay.classList.remove('hidden');
         this.setControlsHidden(false);
-        if (msg) {
-          this.showError(msg);
-        } else {
-          this.hideError();
-        }
+        this.showError(msg);
+      },
+
+      // Offer the start screen over the running session. Nothing stops until a new
+      // source is actually picked, and Cancel goes back to what was playing.
+      changeSource() {
+        if (this.settingsOpen) this.toggleSettings();
+        this.hideError();
+        this.startOverlay.classList.add('switching');
+        this.cancelSourceBtn.hidden = false;
+        this.startOverlay.classList.remove('hidden');
+        this.updateInert();
+      },
+
+      cancelChangeSource() {
+        if (!this.startOverlay.classList.contains('switching')) return;
+        this.startOverlay.classList.remove('switching');
+        this.cancelSourceBtn.hidden = true;
+        this.startOverlay.classList.add('hidden');
+        this.updateInert();
       },
 
       // Butterchurn needs WebGL 2 (iOS 15+). Test on a spare canvas so the real one
@@ -1007,7 +1138,13 @@
           this.updatePresetDropdown();
         }
         this.createVisualizer();
-        this.randomPreset();
+        // Keep the preset and cycling across a change of audio source
+        if (this.currentPreset) {
+          this.loadPreset(this.currentPreset, 0);
+        } else {
+          this.randomPreset();
+        }
+        if (this.isCycling) this.startCycleInterval();
 
         this.hideError();
         this.startOverlay.classList.add('hidden');
@@ -1169,7 +1306,9 @@
       },
 
       updatePlayPauseBtn() {
-        this.playPauseBtn.classList.toggle('paused', !this.audioEl || this.audioEl.paused);
+        const paused = !this.audioEl || this.audioEl.paused;
+        this.playPauseBtn.classList.toggle('paused', paused);
+        this.playPauseBtn.title = paused ? 'Play' : 'Pause';
       },
 
       // Taps and WebGL context loss. Events from a canvas resetCanvas() replaced are ignored.
@@ -1183,6 +1322,9 @@
             this.toggleSettings();
           } else if (this.controlsHidden) {
             this.showControlsTemporarily();
+          } else if (this.controlsTimeout) {
+            // Up after a tap: a second tap puts them away again
+            this.setControlsHidden(true);
           }
         });
 
@@ -1215,7 +1357,15 @@
         this.settingsOpen = !this.settingsOpen;
         this.settingsPanel.classList.toggle('open', this.settingsOpen);
         this.settingsBtn.classList.toggle('active', this.settingsOpen);
+        this.settingsBtn.setAttribute('aria-expanded', this.settingsOpen);
+        const hadFocus = this.settingsPanel.contains(document.activeElement);
         this.updateInert();
+        // Keyboard focus follows the panel: into it on open, back to its button on close
+        if (this.settingsOpen) {
+          this.settingsClose.focus({ preventScroll: true });
+        } else if (hadFocus) {
+          this.settingsBtn.focus({ preventScroll: true });
+        }
       },
 
       // Update cycle duration from input
@@ -1243,27 +1393,30 @@
         this.renderScale = val;
         this.saveSettings();
         this.resize();
+        // Release focus so letter keys work as shortcuts again
+        this.renderScaleInput.blur();
       },
 
       // Handle keyboard shortcuts
       onKeyDown(e) {
-        if (e.metaKey || e.ctrlKey || e.altKey) return;
+        // A held key fires once, so toggles don't flicker and arrows don't queue up presets
+        if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
+        const onStart = this.isStartScreenOpen();
 
         // Esc works even while a settings field has focus
         if (e.key === 'Escape') {
-          if (this.settingsOpen) {
+          if (onStart) {
+            this.cancelChangeSource();
+          } else if (this.settingsOpen) {
             this.toggleSettings();
-          } else if (this.controlsHidden) {
+          } else if (this.isHideMode()) {
             this.setControlsHidden(false);
           }
           return;
         }
 
-        const tag = e.target.tagName;
-        if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
-
-        // Everything else needs a running visualizer
-        if (!this.visualizer) return;
+        // Everything else needs a running visualizer that isn't behind the start screen
+        if (!this.visualizer || onStart || consumesKeys(e.target)) return;
 
         switch (e.key.length === 1 ? e.key.toLowerCase() : e.key) {
           case 'f': this.toggleFullscreen(); break;
@@ -1303,9 +1456,14 @@
         this.settingsBtn.addEventListener('click', () => this.toggleSettings());
         this.settingsClose.addEventListener('click', () => this.toggleSettings());
         this.cycleDurationInput.addEventListener('change', () => this.updateCycleDuration());
+        // Enter commits the number and releases focus, so shortcuts work again
+        this.cycleDurationInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') this.cycleDurationInput.blur();
+        });
         this.favoritesOnlyInput.addEventListener('change', () => this.updateFavoritesOnly());
         this.renderScaleInput.addEventListener('change', () => this.updateRenderScale());
-        this.changeSourceBtn.addEventListener('click', () => this.returnToStart());
+        this.changeSourceBtn.addEventListener('click', () => this.changeSource());
+        this.cancelSourceBtn.addEventListener('click', () => this.cancelChangeSource());
         this.favBtn.addEventListener('click', () => this.toggleFavorite());
         this.fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
         this.hideBtn.addEventListener('click', () => this.toggleControls());
